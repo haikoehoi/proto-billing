@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Jaznu · Billing Module — Prototype</title>
+<style>
+/* ---------- Wireframe + Amplify-ish tokens ---------- */
+:root{
+  --brand:#0d7d8f;          /* Amplify teal */
+  --brand-dark:#0a6473;
+  --accent:#e8963a;         /* orange accent from screenshots */
+  --ink:#1b2733;
+  --ink-2:#5a6b7b;
+  --ink-3:#8a99a8;
+  --line:#d7dee4;
+  --line-2:#e7ecf0;
+  --bg:#eef1f4;
+  --surface:#ffffff;
+  --surface-2:#f5f7f9;
+  --ok:#1f8f4e; --ok-bg:#e6f4ec;
+  --warn:#c07b12; --warn-bg:#fbf1df;
+  --err:#c0392b; --err-bg:#fbeceb;
+  --info:#2b6cb0; --info-bg:#e9f1fa;
+  --radius:12px;
+  --shadow:0 1px 2px rgba(20,40,60,.08),0 6px 20px rgba(20,40,60,.06);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:#c9d2da;font-family:var(--font);color:var(--ink)}
+body{display:flex;justify-content:center;min-height:100vh;padding:16px 0}
+
+/* Phone frame */
+.phone{position:relative;width:100%;max-width:412px;height:calc(100vh - 32px);max-height:880px;
+  background:var(--bg);border-radius:28px;box-shadow:0 12px 40px rgba(0,0,0,.28);
+  overflow:hidden;display:flex;flex-direction:column}
+.statusbar{height:34px;flex:0 0 34px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;font-size:12px;font-weight:600;color:var(--ink);background:var(--surface)}
+.statusbar .dots{display:flex;gap:4px}
+.statusbar .dots i{width:14px;height:9px;background:var(--ink);border-radius:2px;display:inline-block;opacity:.85}
+
+/* Scroll area */
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;position:relative}
+.screen::-webkit-scrollbar{width:0}
+
+/* App bar */
+.appbar{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line-2);
+  display:flex;align-items:center;gap:10px;padding:12px 16px}
+.appbar h1{font-size:19px;margin:0;font-weight:700;letter-spacing:-.2px}
+.appbar .back{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--surface);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px;color:var(--ink)}
+.appbar .spacer{flex:1}
+.avatar{width:38px;height:38px;border-radius:50%;border:2px solid var(--accent);
+  display:flex;align-items:center;justify-content:center;color:var(--accent);background:#fff}
+
+.pad{padding:16px}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);
+  box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden}
+.card .hd{padding:14px 16px 6px;font-size:16px;font-weight:700}
+.card .bd{padding:0 16px 14px}
+.muted{color:var(--ink-2)}
+.tiny{font-size:12px}
+.dim{color:var(--ink-3)}
+
+/* Chips / tags */
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:16px;
+  font-size:13px;font-weight:600;background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line-2)}
+.chip.done{background:var(--ok-bg);color:var(--ok)}
+.chip.lock{background:#eceff2;color:var(--ink-3)}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+
+/* Tabs (chips = tabs) */
+.tabs{position:sticky;top:57px;z-index:4;display:flex;gap:8px;padding:12px 16px;background:var(--bg);
+  border-bottom:1px solid var(--line-2);overflow-x:auto}
+.tab{flex:0 0 auto;padding:8px 16px;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;
+  background:var(--surface);border:1px solid var(--line);color:var(--ink-2);white-space:nowrap}
+.tab.active{background:var(--brand);border-color:var(--brand);color:#fff}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px 16px;
+  border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;border:1px solid transparent;font-family:inherit}
+.btn.primary{background:var(--brand);color:#fff}
+.btn.primary:active{background:var(--brand-dark)}
+.btn.ghost{background:var(--surface);color:var(--brand);border-color:var(--brand)}
+.btn.subtle{background:var(--surface-2);color:var(--ink);border-color:var(--line)}
+.btn.danger{background:#fff;color:var(--err);border-color:var(--err)}
+.btn.sm{width:auto;padding:9px 14px;font-size:13.5px;border-radius:9px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-row{display:flex;gap:10px}
+.btn-row .btn{width:auto;flex:1}
+
+/* Balance block */
+.balance{font-size:40px;font-weight:800;letter-spacing:-1px;line-height:1}
+.balance small{font-size:20px;font-weight:700;color:var(--ink-2)}
+.cover{margin-top:10px;font-size:14px;color:var(--ink)}
+.cover b{font-weight:700}
+.kv{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px dashed var(--line-2);font-size:14px}
+.kv:first-child{border-top:0}
+.kv .k{color:var(--ink-2)}
+.kv .v{font-weight:700}
+
+/* Notification banner */
+.notif{border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid;font-size:14px;line-height:1.45}
+.notif .nt{font-weight:700;margin-bottom:4px}
+.notif.info{background:var(--info-bg);border-color:#c5daf1;color:#20456e}
+.notif.warn{background:var(--warn-bg);border-color:#f0dcb4;color:#7a5410}
+.notif.err{background:var(--err-bg);border-color:#f3c6c1;color:#8a2b20}
+.notif.ok{background:var(--ok-bg);border-color:#c3e6d1;color:#155e33}
+.notif .btn{margin-top:12px}
+.notif{position:relative}
+.notif-x{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:7px;border:1px solid rgba(0,0,0,.12);
+  background:rgba(255,255,255,.55);cursor:pointer;font-size:13px;color:inherit;line-height:1;display:flex;align-items:center;justify-content:center}
+.notif .nt{padding-right:26px}
+
+/* Status pill */
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:14px;font-size:12px;font-weight:700}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.proc{background:var(--info-bg);color:var(--info)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.err{background:var(--err-bg);color:var(--err)}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+
+/* Last operation card */
+.lastop{border:1px solid var(--line-2);border-radius:10px;padding:12px;background:var(--surface-2)}
+.lastop .row1{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.lastop .amt{font-weight:800;font-size:16px}
+.lastop .ctx{font-size:13px;color:var(--ink-2);margin-top:2px}
+.lastop .dt{font-size:12px;color:var(--ink-3);margin-top:6px}
+.verifying{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--info);font-weight:600}
+.spinner{width:16px;height:16px;border:2px solid #c5daf1;border-top-color:var(--info);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Journal entries */
+.jentry{border:1px solid var(--line-2);border-radius:10px;margin-bottom:10px;background:var(--surface);overflow:hidden}
+.jentry .jhead{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer}
+.jicon{width:34px;height:34px;flex:0 0 34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.jicon.credit{background:var(--ok-bg);color:var(--ok)}
+.jicon.charge{background:#eef1f4;color:var(--ink-2)}
+.jicon.activate{background:var(--info-bg);color:var(--info)}
+.jicon.deactivate{background:var(--warn-bg);color:var(--warn)}
+.jicon.pause{background:var(--err-bg);color:var(--err)}
+.jicon.paypal{background:var(--info-bg);color:var(--info)}
+.jicon.paypal.crit{background:var(--err-bg);color:var(--err)}
+.jentry .jmid{flex:1;min-width:0}
+.jentry .jtitle{font-weight:700;font-size:14px}
+.jentry .jsub{font-size:12px;color:var(--ink-3);margin-top:2px}
+.jentry .jamt{font-weight:800;font-size:14px;white-space:nowrap}
+.jentry .jamt.plus{color:var(--ok)}
+.jentry .jbody{display:none;padding:0 14px 14px;border-top:1px dashed var(--line-2);margin-top:0}
+.jentry.open .jbody{display:block;padding-top:12px}
+.jentry .chev{color:var(--ink-3);font-size:13px;margin-left:2px}
+.detail-row{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:5px 0}
+.detail-row .dk{color:var(--ink-2)}
+.detail-row .dv{font-weight:600;text-align:right}
+.idrow{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--surface-2);
+  border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px}
+.idrow code{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copybtn{flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 9px;font-size:12px;font-weight:600;cursor:pointer;color:var(--brand)}
+
+/* Feature cards */
+.feat{border:1px solid var(--line-2);border-radius:11px;margin-bottom:11px;background:var(--surface);cursor:pointer;overflow:hidden}
+.feat .ftop{display:flex;align-items:flex-start;gap:12px;padding:14px}
+.fthumb{width:44px;height:44px;flex:0 0 44px;border-radius:10px;background:repeating-linear-gradient(45deg,#eef1f4,#eef1f4 6px,#e5e9ee 6px,#e5e9ee 12px);
+  display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:18px;border:1px solid var(--line-2)}
+.feat .fname{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.feat .fdesc{font-size:13px;color:var(--ink-2);margin-top:3px;line-height:1.4}
+.feat .fmeta{font-size:12px;color:var(--ink-3);margin-top:7px}
+.badge{font-size:10.5px;font-weight:800;letter-spacing:.4px;padding:2px 7px;border-radius:6px;text-transform:uppercase}
+.badge.active{background:var(--ok-bg);color:var(--ok)}
+.badge.pro{background:#efe7fb;color:#6b46c1}
+.badge.paused{background:var(--err-bg);color:var(--err)}
+.badge.proc{background:var(--info-bg);color:var(--info)}
+.sec-label{font-size:12px;font-weight:800;letter-spacing:.6px;color:var(--ink-3);text-transform:uppercase;margin:6px 2px 10px}
+.pkg-heading{font-size:16px;font-weight:800;color:var(--ink);margin:2px 2px 12px;display:flex;align-items:center;gap:8px}
+.pkg-heading:not(:first-child){margin-top:20px}
+.pkg-heading .count{font-size:12px;font-weight:700;color:var(--ink-3);background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;padding:1px 8px}
+
+/* Empty state */
+.empty{text-align:center;color:var(--ink-3);padding:40px 20px}
+.empty .ei{font-size:34px;margin-bottom:10px}
+
+/* Dashboard specifics */
+.qr{display:flex;gap:16px;align-items:center;margin-bottom:6px}
+.qrbox{width:92px;height:92px;flex:0 0 92px;border-radius:10px;background:
+  repeating-linear-gradient(0deg,#1b2733 0 4px,#fff 4px 8px),repeating-linear-gradient(90deg,#1b2733 0 4px,transparent 4px 8px);
+  background-blend-mode:screen;border:1px solid var(--line)}
+.qr .qcap{font-size:15px;font-weight:700}
+.qr .qsub{font-size:12px;color:var(--ink-3);margin-top:3px}
+.progress{height:6px;border-radius:4px;background:var(--line-2);margin-top:12px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent)}
+.module-static{opacity:.92}
+.module-static .hd{color:var(--ink)}
+.locktag{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--ink-3);font-weight:600;margin-top:2px}
+
+/* Billing module card (inline, expandable with tabs) on dashboard */
+.billing-card{border:1px solid var(--brand);box-shadow:0 2px 10px rgba(13,125,143,.14)}
+.billing-card .hd{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px}
+.billing-tabs{display:flex;gap:8px;margin:0 0 14px;overflow-x:auto;padding-bottom:2px}
+.subcard{border:1px solid var(--line-2);border-radius:11px;padding:14px;margin-bottom:12px;background:var(--surface-2)}
+.subcard:last-child{margin-bottom:0}
+.subhd{font-weight:700;font-size:15px;margin-bottom:10px}
+
+/* Inputs */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
+.field .inp{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;background:#fff;padding:0 12px}
+.field .inp:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px rgba(13,125,143,.12)}
+.field .inp span{color:var(--ink-3);font-weight:700}
+.field input{border:0;outline:0;padding:12px 8px;font-size:16px;width:100%;font-family:inherit;background:transparent;color:var(--ink)}
+.field .hint{font-size:12px;color:var(--ink-3);margin-top:6px}
+.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+.preset{border:1px solid var(--line);border-radius:11px;padding:12px;cursor:pointer;background:#fff;position:relative}
+.preset.sel{border-color:var(--brand);background:#f0f9fa;box-shadow:0 0 0 2px rgba(13,125,143,.15)}
+.preset .pp{font-weight:800;font-size:15px}
+.preset .pa{font-size:13px;color:var(--ink-2);margin-top:2px}
+.preset .pb{font-size:11.5px;color:var(--ok);font-weight:700;margin-top:6px}
+.recap{background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;padding:12px 14px;margin:6px 0 14px}
+
+/* Bottom sheet */
+.scrim{position:absolute;inset:0;background:rgba(15,25,35,.42);opacity:0;pointer-events:none;
+  transition:opacity .22s;z-index:20}
+.scrim.show{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--surface);
+  border-radius:20px 20px 0 0;transform:translateY(100%);transition:transform .28s cubic-bezier(.3,.8,.3,1);
+  max-height:90%;display:flex;flex-direction:column;box-shadow:0 -8px 30px rgba(0,0,0,.2)}
+.sheet.show{transform:translateY(0)}
+.sheet .grip{width:40px;height:4px;border-radius:3px;background:var(--line);margin:10px auto 4px}
+.sheet .shead{display:flex;align-items:center;justify-content:space-between;padding:6px 18px 10px}
+.sheet .shead h3{margin:0;font-size:18px;font-weight:700}
+.sheet .sclose{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:15px;color:var(--ink-2)}
+.sheet .sbody{padding:4px 18px 8px;overflow-y:auto}
+.sheet .sfoot{padding:12px 18px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--line-2);background:var(--surface)}
+
+/* PayPal mock */
+.pp-screen{position:absolute;inset:0;z-index:30;background:#f4f6f8;transform:translateX(100%);
+  transition:transform .3s cubic-bezier(.3,.8,.3,1);display:flex;flex-direction:column}
+.pp-screen.show{transform:translateX(0)}
+.pp-bar{background:#003087;color:#fff;padding:16px;display:flex;align-items:center;gap:10px}
+.pp-logo{font-weight:800;font-size:20px;font-style:italic}
+.pp-logo .b{color:#009cde}
+.pp-url{margin-left:auto;font-size:11px;opacity:.8;display:flex;align-items:center;gap:5px}
+.pp-body{flex:1;overflow-y:auto;padding:20px 18px}
+.pp-amount{text-align:center;padding:10px 0 20px}
+.pp-amount .lbl{font-size:13px;color:var(--ink-3)}
+.pp-amount .val{font-size:34px;font-weight:800;color:#003087;margin-top:4px}
+.pp-amount .to{font-size:13px;color:var(--ink-2);margin-top:4px}
+.sim-note{background:#fff8e6;border:1px dashed #e8c96a;border-radius:10px;padding:11px 13px;font-size:12.5px;color:#7a5f18;margin-bottom:16px;line-height:1.45}
+.sim-list{display:flex;flex-direction:column;gap:9px}
+.sim-btn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:13px 14px;border-radius:11px;
+  border:1px solid var(--line);background:#fff;cursor:pointer;font-family:inherit}
+.sim-btn:active{background:var(--surface-2)}
+.sim-ic{width:30px;height:30px;border-radius:8px;flex:0 0 30px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.sim-btn>span{display:flex;flex-direction:column}
+.sim-btn .st{display:block;font-weight:700;font-size:14px}
+.sim-btn .ss{display:block;font-size:12px;color:var(--ink-3);margin-top:1px}
+.pp-cancel{margin-top:16px;text-align:center}
+.pp-cancel a{color:var(--info);font-size:13px;font-weight:600;text-decoration:none}
+
+/* Toast */
+.toast{position:absolute;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);z-index:60;
+  background:#1b2733;color:#fff;padding:11px 16px;border-radius:10px;font-size:13px;font-weight:600;
+  opacity:0;pointer-events:none;transition:all .25s;max-width:80%;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Scenario switcher */
+.scen-fab{position:absolute;right:14px;bottom:20px;z-index:15;width:52px;height:52px;border-radius:50%;
+  background:var(--ink);color:#fff;border:0;font-size:22px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.28)}
+.scen-panel{position:absolute;inset:0;z-index:40;background:rgba(15,25,35,.5);opacity:0;pointer-events:none;transition:.2s}
+.scen-panel.show{opacity:1;pointer-events:auto}
+.scen-inner{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom));max-height:88%;overflow-y:auto}
+.scen-inner h3{margin:6px 2px 4px;font-size:17px}
+.scen-inner p.sub{margin:0 2px 12px;font-size:12.5px;color:var(--ink-2)}
+.scen-item{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:11px;margin-bottom:9px;cursor:pointer}
+.scen-item.cur{border-color:var(--brand);background:#f0f9fa}
+.scen-item .si{font-size:20px;flex:0 0 26px;text-align:center}
+.scen-item .stt{font-weight:700;font-size:14px}
+.scen-item .sds{font-size:12px;color:var(--ink-2);margin-top:2px;line-height:1.4}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="statusbar">
+    <span id="clock">9:41</span>
+    <span class="dots"><i></i></span>
+  </div>
+
+  <!-- ============ DASHBOARD ============ -->
+  <div class="screen" id="screen-dashboard">
+    <div class="appbar">
+      <h1>Dashboard</h1>
+      <div class="spacer"></div>
+      <div class="avatar">◕</div>
+    </div>
+    <div class="pad">
+      <div class="card">
+        <div class="bd" style="padding-top:14px">
+          <div class="qr">
+            <div class="qrbox"></div>
+            <div>
+              <div class="qcap">Download menu QR ⭳</div>
+              <div class="qsub">print and place it on tables</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BILLING module (replaces "Subscription plan") — inline card with tabs -->
+      <div class="card billing-card" id="billingModule">
+        <div class="hd"><span>Billing</span><span id="billingStatus"></span></div>
+        <div class="bd">
+          <div class="billing-tabs">
+            <div class="tab active" data-tab="overview">Overview</div>
+            <div class="tab" data-tab="packages">Packages &amp; features</div>
+            <div class="tab" data-tab="journal">Journal</div>
+          </div>
+          <div id="tab-overview"></div>
+          <div id="tab-journal" class="hidden"></div>
+          <div id="tab-packages" class="hidden"></div>
+        </div>
+      </div>
+
+      <!-- Other modules: static, non-interactive -->
+      <div class="card module-static" data-static>
+        <div class="hd">Public info</div>
+        <div class="bd">
+          <div class="muted tiny">Visible to guests in QR menu</div>
+          <div class="chip-row"><span class="chip done">✓ Essentials</span><span class="chip done">✓ Contacts</span><span class="chip done">✓ Details</span></div>
+          <div class="progress"><i style="width:40%"></i></div>
+        </div>
+      </div>
+      <div class="card module-static" data-static>
+        <div class="hd">Menu and services</div>
+        <div class="bd">
+          <div class="chip-row"><span class="chip done">✓ Groups</span><span class="chip done">✓ Menu items</span><span class="chip done">✓ Sizes</span></div>
+          <div class="progress"><i style="width:65%"></i></div>
+        </div>
+      </div>
+      <div class="card module-static" data-static>
+        <div class="hd">Operating hours</div>
+        <div class="bd">
+          <div class="chip-row"><span class="chip done">✓ Daily open/close</span><span class="chip done">✓ Last order time</span></div>
+          <div class="progress"><i style="width:80%"></i></div>
+        </div>
+      </div>
+      <div class="card module-static" data-static>
+        <div class="hd">Orders</div>
+        <div class="bd">
+          <div class="locktag">🔒 Blocked</div>
+          <div class="chip-row"><span class="chip lock">✓ Opened</span><span class="chip lock">✓ Notifications</span><span class="chip lock">✓ Telegram bot</span></div>
+        </div>
+      </div>
+      <div class="card module-static" data-static>
+        <div class="hd">Restaurant management system</div>
+        <div class="bd">
+          <div class="locktag">🔒 Blocked</div>
+          <div class="chip-row"><span class="chip lock">✓ Integration</span><span class="chip lock">✓ Waiters</span><span class="chip lock">✓ Tables</span></div>
+        </div>
+      </div>
+      <div class="card module-static" data-static>
+        <div class="hd">Payment service provider</div>
+        <div class="bd">
+          <div class="locktag">🔒 Blocked</div>
+          <div class="chip-row"><span class="chip lock">✓ Integration</span><span class="chip lock">✓ Payment methods</span><span class="chip lock">✓ Split bills</span></div>
+        </div>
+      </div>
+      <div style="height:80px"></div>
+    </div>
+  </div>
+
+  <!-- Bottom sheet -->
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="sheet">
+    <div class="grip"></div>
+    <div class="shead"><h3 id="sheetTitle">Title</h3><button class="sclose" id="sheetClose">✕</button></div>
+    <div class="sbody" id="sheetBody"></div>
+    <div class="sfoot" id="sheetFoot"></div>
+  </div>
+
+  <!-- PayPal mock -->
+  <div class="pp-screen" id="ppScreen">
+    <div class="pp-bar">
+      <span class="pp-logo">Pay<span class="b">Pal</span></span>
+      <span class="pp-url">🔒 paypal.com</span>
+    </div>
+    <div class="pp-body">
+      <div class="pp-amount">
+        <div class="lbl">You are paying</div>
+        <div class="val" id="ppAmount">$0.00</div>
+        <div class="to" id="ppTo">to Jaznu</div>
+      </div>
+      <div class="sim-note">🧪 <b>Prototype sandbox.</b> No real money is charged. Pick an outcome below to simulate how Jaznu handles each PayPal status.</div>
+      <div class="sim-list" id="ppList"></div>
+      <div class="pp-cancel"><a id="ppCancel">Cancel and return to Jaznu</a></div>
+    </div>
+  </div>
+
+  <!-- Scenario switcher -->
+  <button class="scen-fab" id="scenFab" title="Test scenarios">🧪</button>
+  <div class="scen-panel" id="scenPanel">
+    <div class="scen-inner">
+      <h3>Test scenarios</h3>
+      <p class="sub">Jump between billing states to test the flows — no real payments involved.</p>
+      <div id="scenList"></div>
+      <button class="btn subtle" id="scenClose" style="margin-top:6px">Close</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ================= Model ================= */
+const NOW = new Date(2026,6,2); // Jul 2, 2026 (month is 0-indexed)
+const MS = 86400000;
+const fmt = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+const addDays = (base,n)=> new Date(base.getTime()+n*MS);
+const daysBetween = (a,b)=> Math.round((b-a)/MS);
+const money = n => '$'+ (Math.round(n*100)/100).toFixed(2);
+const rid = p => p+'-'+Math.random().toString(36).slice(2,8).toUpperCase();
+
+/* Feature catalog templates */
+function catalog(){return{
+  extended:{id:'extended',type:'package',icon:'🍽️',name:'Extended Menu',
+    desc:'Show dish photos, portion sizes and prices to your guests.',
+    includes:['Dish photos','Portion sizes','Social links'],daily:0.30,
+    risk:'If you turn this off, guests will no longer see dish photos, sizes and prices.'},
+  analytics:{id:'analytics',type:'package',icon:'📊',name:'Analytics',
+    desc:'See which dishes get the most attention and when demand peaks.',
+    includes:['Menu views','Top dishes','Peak hours'],daily:0.20,
+    risk:'If you turn this off, you will stop collecting menu view statistics.'},
+  branding:{id:'branding',type:'feature',icon:'🎨',name:'Custom Branding',
+    desc:'Your logo and colors on the public menu.',
+    includes:[],daily:0.15,
+    risk:'If you turn this off, the menu returns to the default Jaznu style.'},
+  transfer:{id:'transfer',type:'oneoff',icon:'📷',name:'Menu Transfer',
+    desc:'Upload a photo of your paper menu — we digitize it for you.',
+    includes:[],price:9.00}
+};}
+
+let state, currentTab='overview';
+
+/* ---- Scenario definitions ---- */
+const SCENARIOS = {
+  healthy:{icon:'💚',title:'Healthy — active paid package',
+    desc:'Balance $50, Extended Menu active. Good runway. Try activating another feature or topping up.'},
+  activation:{icon:'✨',title:'Activation focus',
+    desc:'Balance $50, no paid features yet. Activate a paid feature straight from your balance.'},
+  low:{icon:'🟡',title:'Low balance (3–14 days)',
+    desc:'Runway is getting short. Soft reminder with value recap + top-up CTA.'},
+  critical:{icon:'🟠',title:'Critical (1–3 days)',
+    desc:'Paid features will be turned off soon. Urgent top-up CTA.'},
+  grace:{icon:'🔴',title:'Grace period',
+    desc:'Balance hit $0 but paid features stay active for 7 more days.'},
+  paused:{icon:'⏸️',title:'Paused',
+    desc:'Balance ran out, paid features suspended. Settings are saved — top up to restore.'},
+  ledger:{icon:'🧾',title:'Full journal & PayPal statuses',
+    desc:'A rich account history: every card type plus PayPal operations across all statuses, including critical ones.'}
+};
+
+function buildScenario(key){
+  const C=catalog();
+  const S={key,balance:0,graceDaysLeft:0,paused:false,lastPP:null,verifying:false,
+    features:{}, journal:[]};
+  // default catalog statuses
+  S.features.extended = {...C.extended,status:'available'};
+  S.features.analytics= {...C.analytics,status:'available'};
+  S.features.branding = {...C.branding,status:'available_used',lastActive:addDays(NOW,-53),
+     stats:'While active: guests viewed your branded menu 1,180 times.'};
+  S.features.transfer = {...C.transfer,status:'available'};
+
+  const actExtended = (activatedOffset)=>{
+    S.features.extended.status='active';
+    S.features.extended.activated=addDays(NOW,activatedOffset);
+  };
+
+  if(key==='healthy'){
+    S.balance=50; actExtended(-12);
+    S.journal=[
+      {id:rid('JZ'),kind:'credit',amount:50,date:addDays(NOW,-12),context:'Wallet top-up · 3 months coverage',status:'Completed',balBefore:0,balAfter:50,ppId:rid('PP'),jzId:rid('JZ'),dcAt:0.30},
+      {id:rid('JZ'),kind:'activate',feat:'Extended Menu',daily:0.30,date:addDays(NOW,-12),dcBefore:0,dcAfter:0.30},
+      {id:rid('JZ'),kind:'charge',amount:0.30,date:addDays(NOW,-2),context:'Daily charge · Extended Menu',feat:'Extended Menu',status:'Completed',balBefore:50.6,balAfter:50.3,jzId:rid('JZ')},
+      {id:rid('JZ'),kind:'charge',amount:0.30,date:addDays(NOW,-1),context:'Daily charge · Extended Menu',feat:'Extended Menu',status:'Completed',balBefore:50.3,balAfter:50,jzId:rid('JZ')}
+    ];
+    S.lastPP={amount:50,context:'Wallet top-up · 3 months coverage',date:addDays(NOW,-12),status:'Completed'};
+    S.notif={type:'info',critical:false,title:'Lock in a longer runway',
+      body:'Your menu got <b>1,240 views</b> this month. Top up for a longer coverage period — fewer top-ups, uninterrupted work.',cta:'Top up',action:'topup'};
+  }
+  else if(key==='activation'){
+    S.balance=50; // no active paid features → daily cost 0
+    S.journal=[
+      {id:rid('JZ'),kind:'credit',amount:50,date:addDays(NOW,-3),context:'Wallet top-up',status:'Completed',balBefore:0,balAfter:50,ppId:rid('PP'),jzId:rid('JZ')}
+    ];
+    S.lastPP={amount:50,context:'Wallet top-up',date:addDays(NOW,-3),status:'Completed'};
+    S.notif={type:'info',critical:false,title:'See what your guests love',
+      body:'Your menu was viewed <b>243 times</b>. Activate <b>Analytics</b> to see which dishes get the most attention and when demand peaks.',cta:'Activate Analytics',action:'activate:analytics'};
+  }
+  else if(key==='low'){
+    S.balance=3.20; actExtended(-40); S.features.analytics.status='active'; S.features.analytics.activated=addDays(NOW,-20);
+    S.journal=lowJournal(S);
+    S.lastPP={amount:20,context:'Wallet top-up · 1 month coverage',date:addDays(NOW,-30),status:'Completed'};
+    S.notif={type:'warn',critical:true,title:'Your balance runs out soon',
+      body:'About <b>6 days</b> left. Guests viewed your extended menu photos <b>320 times</b> and analytics recorded <b>240 sessions</b>. Top up to keep features running.',cta:'Top up',action:'topup'};
+  }
+  else if(key==='critical'){
+    S.balance=0.80; actExtended(-58); S.features.analytics.status='active'; S.features.analytics.activated=addDays(NOW,-30);
+    S.journal=lowJournal(S);
+    S.lastPP={amount:20,context:'Wallet top-up · 1 month coverage',date:addDays(NOW,-30),status:'Completed'};
+    S.notif={type:'err',critical:true,title:'Only 1–2 days left',
+      body:'You have <b>~1 day</b> before paid features are turned off. Top up now to keep Extended Menu and Analytics running without interruption.',cta:'Top up',action:'topup'};
+  }
+  else if(key==='grace'){
+    S.balance=0; S.graceDaysLeft=5; actExtended(-64); S.features.analytics.status='active'; S.features.analytics.activated=addDays(NOW,-30);
+    S.journal=lowJournal(S);
+    S.lastPP={amount:20,context:'Wallet top-up · 1 month coverage',date:addDays(NOW,-33),status:'Completed'};
+    S.notif={type:'warn',critical:true,title:'Grace period active',
+      body:'Your balance ran out, but we kept paid features active for <b>5 more days</b> so you have time to top up without interruption. Top up to keep them running.',cta:'Top up',action:'topup'};
+  }
+  else if(key==='ledger'){
+    S.balance=50; actExtended(-30); S.features.analytics.status='active'; S.features.analytics.activated=addDays(NOW,-22);
+    S.journal=ledgerJournal();
+    S.lastPP={amount:50,context:'Wallet top-up · 3 months coverage',date:addDays(NOW,-30),status:'Completed'};
+    S.notif=null;
+  }
+  else if(key==='paused'){
+    S.balance=0; S.paused=true;
+    S.features.extended.status='paused'; S.features.extended.activated=addDays(NOW,-75);
+    S.features.analytics.status='paused'; S.features.analytics.activated=addDays(NOW,-45);
+    S.journal=[...lowJournal(S),
+      {id:rid('JZ'),kind:'pause',feat:'Extended Menu, Analytics',date:addDays(NOW,-1),context:'Paid features suspended — $0 balance'}];
+    S.lastPP={amount:20,context:'Wallet top-up · 1 month coverage',date:addDays(NOW,-40),status:'Completed'};
+    S.notif={type:'err',critical:true,title:'Paid features paused',
+      body:'Your balance ran out and paid features are paused. <b>Your settings and data are saved.</b> Top up to restore access to Extended Menu and Analytics.',cta:'Top up',action:'topup'};
+  }
+  return S;
+}
+function lowJournal(S){
+  return [
+    {id:rid('JZ'),kind:'credit',amount:20,date:addDays(NOW,-30),context:'Wallet top-up · 1 month coverage',status:'Completed',balBefore:0,balAfter:20,ppId:rid('PP'),jzId:rid('JZ'),dcAt:0.50},
+    {id:rid('JZ'),kind:'activate',feat:'Analytics',daily:0.20,date:addDays(NOW,-20),dcBefore:0.30,dcAfter:0.50},
+    {id:rid('JZ'),kind:'charge',amount:0.50,date:addDays(NOW,-1),context:'Daily charge · Extended Menu, Analytics',feat:'Extended Menu, Analytics',status:'Completed',balBefore:S.balance+0.5,balAfter:S.balance,jzId:rid('JZ')}
+  ];
+}
+// Rich history covering every journal card type + PayPal operations across all statuses (incl. critical)
+function ledgerJournal(){
+  const pp=(off,amount,context,status,explain,cta,critical)=>({id:rid('JZ'),kind:'paypal',date:addDays(NOW,off),
+    amount,context,status,explain,cta,critical:!!critical,ppId:rid('PP'),jzId:rid('JZ')});
+  return [
+    // --- Feature lifecycle cards ---
+    {id:rid('JZ'),kind:'credit',amount:50,date:addDays(NOW,-30),context:'Wallet top-up · 3 months coverage',status:'Completed',balBefore:0,balAfter:50,ppId:rid('PP'),jzId:rid('JZ'),dcAt:0.30,activeAt:'Extended Menu'},
+    {id:rid('JZ'),kind:'activate',feat:'Extended Menu',daily:0.30,date:addDays(NOW,-30),dcBefore:0,dcAfter:0.30},
+    {id:rid('JZ'),kind:'oneoff',amount:9.00,date:addDays(NOW,-26),context:'One-time · Menu Transfer',feat:'Menu Transfer',status:'Completed',balBefore:50,balAfter:50,jzId:rid('JZ'),ppId:rid('PP')},
+    {id:rid('JZ'),kind:'activate',feat:'Analytics',daily:0.20,date:addDays(NOW,-22),dcBefore:0.30,dcAfter:0.50},
+    {id:rid('JZ'),kind:'charge',amount:0.50,date:addDays(NOW,-20),context:'Daily charge · Extended Menu, Analytics',feat:'Extended Menu, Analytics',status:'Completed',balBefore:49.5,balAfter:49.0,coverAfter:'until '+fmt(addDays(NOW,98)),jzId:rid('JZ')},
+    {id:rid('JZ'),kind:'deactivate',feat:'Custom Branding',date:addDays(NOW,-16),dcBefore:0.65,dcAfter:0.50,newCover:'until '+fmt(addDays(NOW,90))},
+    // --- PayPal operations across statuses ---
+    pp(-14,20,'Wallet top-up','Processing','PayPal is processing the payment. No need to pay again — your balance updates after final confirmation.','Update status'),
+    pp(-13,20,'Wallet top-up','Partially completed','PayPal processed only part of the amount. We\'re checking the details.','Contact support',true),
+    pp(-12,15,'Wallet top-up','Awaiting confirmation','Payment wasn\'t confirmed in PayPal.','Continue in PayPal'),
+    pp(-11,15,'Wallet top-up','Action required','PayPal needs you to confirm the payment or choose another method.','Return to PayPal'),
+    pp(-10,25,'Wallet top-up','Cancelled','The payment was cancelled. Your Jaznu balance is unchanged.','Start again'),
+    pp(-9,25,'Wallet top-up','Failed','PayPal couldn\'t complete the payment. Your Jaznu balance is unchanged.','Try again',true),
+    pp(-8,20,'Wallet top-up','Clarifying','PayPal didn\'t return a final response yet. Jaznu will re-check the operation.','Update status'),
+    pp(-7,20,'Wallet top-up','Payment delayed','This is taking longer than usual. We can verify it via PayPal.','Contact support',true),
+    pp(-5,30,'Refund · overcharge','Refunded','Funds were returned via PayPal. Your Jaznu balance was adjusted.','View details',true),
+    pp(-4,12,'Refund · partial','Partial refund','Part of the amount was returned via PayPal. Your Jaznu balance was adjusted.','View details',true),
+    pp(-3,12,'Refund · in progress','Refund processing','PayPal started the refund but hasn\'t completed it yet.','Update status'),
+    pp(-2,18,'Refund · failed','Refund failed','PayPal couldn\'t complete the refund, or it was cancelled.','Contact support',true),
+    pp(-1,40,'Chargeback opened','Disputed','A dispute, chargeback or reversal was opened on this payment. Your balance may be adjusted.','Contact support',true)
+  ];
+}
+
+/* ================= Derived ================= */
+function rawDaily(){ // sum of active features' daily rate
+  let sum=0; for(const f of Object.values(state.features)) if(f.status==='active') sum+=f.daily||0;
+  return Math.round(sum*100)/100;
+}
+function activeDailyRaw(){ return rawDaily(); }
+function hasActiveFeatures(){ return rawDaily()>0; }
+function isGrace(){ return !state.paused && state.balance<=0.001 && (state.graceDaysLeft||0)>0; }
+function dailyCost(){ // amount actually charged per day right now
+  if(state.paused) return 0;
+  return rawDaily();
+}
+function balanceDays(){ const d=rawDaily(); return d>0? Math.floor(state.balance/d) : Infinity; }
+function runwayDays(){ // total days of coverage left
+  if(state.paused) return 0;
+  if(isGrace()) return state.graceDaysLeft;
+  const bd=balanceDays();
+  return bd; // Infinity when no active features
+}
+function coverageDate(){
+  if(state.paused) return null;
+  const r=runwayDays();
+  if(r===Infinity) return null;
+  return addDays(NOW, r);
+}
+// coverage date for an arbitrary daily-cost value, at current balance
+function coverForDaily(dc){ return dc>0? fmt(addDays(NOW, Math.floor(state.balance/dc))) : '—'; }
+// Before/after summary block for a feature toggle (title depends on the action)
+function changePreview(title,dcB,dcA){
+  return `<div class="recap"><div class="subhd" style="font-size:13px;margin-bottom:8px">${title}</div>
+    <div class="detail-row"><span class="dk">Daily cost before</span><span class="dv">${money(dcB)}/day</span></div>
+    <div class="detail-row"><span class="dk">Daily cost after</span><span class="dv">${money(dcA)}/day</span></div>
+    <div class="detail-row"><span class="dk">Coverage before</span><span class="dv">${coverForDaily(dcB)}</span></div>
+    <div class="detail-row"><span class="dk">Coverage after</span><span class="dv">${coverForDaily(dcA)}</span></div></div>`;
+}
+
+// A notification disappears once its target action has been completed
+function clearNotifOnAction(action){ if(state.notif && state.notif.action===action) state.notif=null; }
+
+/* ================= Rendering ================= */
+function render(){
+  renderBillingStatus();
+  renderOverview();
+  renderJournal();
+  renderPackages();
+  renderScenarioList();
+}
+
+function renderBillingStatus(){
+  const el=document.getElementById('billingStatus');
+  const cd=coverageDate();
+  let p;
+  if(state.paused) p=['err','Paused'];
+  else if(isGrace()) p=['warn','Grace period'];
+  else if(cd && runwayDays()<=3) p=['err','Critical'];
+  else if(cd && runwayDays()<=14) p=['warn','Low balance'];
+  else p=['ok','Active'];
+  el.innerHTML=`<span class="pill ${p[0]}"><span class="dot"></span>${p[1]}</span>`;
+}
+
+function renderOverview(){
+  const el=document.getElementById('tab-overview');
+  const dc=dailyCost(), cd=coverageDate(), rd=runwayDays();
+  let html='';
+
+  // Notification — non-critical (product funnel) ones are dismissible with an X
+  if(state.notif){
+    const n=state.notif;
+    const x = n.critical? '' : `<button class="notif-x" data-notif-dismiss title="Dismiss">✕</button>`;
+    html+=`<div class="notif ${n.type}">
+      ${x}
+      <div class="nt">${n.title}</div><div>${n.body}</div>
+      <button class="btn primary" data-notif-action="${n.action}">${n.cta}</button>
+    </div>`;
+  }
+
+  // Balance card
+  let coverLine;
+  if(state.paused){
+    coverLine=`<div class="cover">Balance is <b>$0</b> — paid features are paused. Settings saved.</div>`;
+  } else if(isGrace()){
+    coverLine=`<div class="cover">Balance is <b>$0</b> — grace period keeps features running for <b>${state.graceDaysLeft} more days</b>.</div>`;
+  } else if(cd){
+    coverLine=`<div class="cover">Your balance covers you until <b>${fmt(cd)}</b> <span class="dim">(${rd} days)</span></div>`;
+  } else {
+    coverLine=`<div class="cover dim">No active paid features — your balance isn't being spent yet.</div>`;
+  }
+  html+=`<div class="subcard" style="background:var(--surface)">
+    <div class="tiny muted" style="margin-bottom:4px">Wallet balance</div>
+    <div class="balance">${money(state.balance)}</div>
+    ${coverLine}
+    <div style="margin-top:12px">
+      <div class="kv"><span class="k">Daily cost (current config)</span><span class="v">${money(dc)}/day</span></div>
+    </div>
+    <button class="btn primary" style="margin-top:12px" data-action="topup">Top up balance</button>
+  </div>`;
+
+  // Last PayPal operation
+  html+=`<div class="subcard"><div class="subhd">Last PayPal operation</div>`;
+  if(state.verifying){
+    html+=`<div class="lastop"><div class="verifying"><span class="spinner"></span>Verifying payment…</div>
+      <div class="tiny dim" style="margin-top:8px">We'll update your balance once PayPal confirms.</div></div>`;
+  } else if(state.lastPP){
+    const p=state.lastPP;
+    html+=`<div class="lastop">
+      <div class="row1"><div><div class="amt">${money(p.amount)}</div><div class="ctx">${p.context}</div></div>
+      ${statusPill(p.status)}</div>
+      <div class="dt">${fmt(p.date)} · ${['10:24 AM','2:47 PM','9:12 AM'][p.date.getDate()%3]}</div>
+      ${ppStatusCTA(p.status)}
+    </div>`;
+  } else {
+    html+=`<div class="empty" style="padding:24px"><div class="ei">💳</div>No operations yet</div>`;
+  }
+  html+=`</div>`;
+
+  el.innerHTML=html;
+}
+
+function statusPill(s){
+  const map={
+    'Completed':['ok','Completed'],'Partially completed':['warn','Partially completed'],
+    'Processing':['proc','Processing'],'Payment delayed':['warn','Delayed'],
+    'Awaiting confirmation':['warn','Awaiting confirmation'],'Action required':['warn','Action required'],
+    'Cancelled':['err','Cancelled'],'Failed':['err','Failed'],'Clarifying':['proc','Status clarifying'],
+    'Refunded':['warn','Refunded'],'Partial refund':['warn','Partial refund'],
+    'Refund processing':['proc','Refund processing'],'Refund failed':['err','Refund failed'],
+    'Disputed':['err','Disputed']
+  };
+  const [c,t]=map[s]||['proc',s];
+  return `<span class="pill ${c}"><span class="dot"></span>${t}</span>`;
+}
+function ppStatusCTA(s){
+  const cta={
+    'Processing':['Update status','ppUpdate'],'Payment delayed':['Contact support','support'],
+    'Awaiting confirmation':['Continue in PayPal','ppResume'],'Action required':['Return to PayPal','ppResume'],
+    'Cancelled':['Start again','topup'],'Failed':['Try again','topup'],
+    'Clarifying':['Update status','ppUpdate'],'Partially completed':['Contact support','support']
+  };
+  if(!cta[s]) return '';
+  const [label,act]=cta[s];
+  const explain={
+    'Processing':'PayPal is processing the payment. No need to pay again — your balance updates after final confirmation.',
+    'Awaiting confirmation':'Payment wasn\'t confirmed in PayPal.',
+    'Action required':'PayPal needs you to confirm the payment or choose another method.',
+    'Cancelled':'The payment was cancelled. Your Jaznu balance is unchanged.',
+    'Failed':'PayPal couldn\'t complete the payment. Your Jaznu balance is unchanged.',
+    'Clarifying':'PayPal didn\'t return a final response yet. Jaznu will re-check the operation.',
+    'Partially completed':'PayPal processed only part of the amount. We\'re checking the details.',
+    'Payment delayed':'This is taking longer than usual. We can verify it via PayPal.'
+  }[s]||'';
+  return `<div class="tiny muted" style="margin-top:10px;line-height:1.45">${explain}</div>
+    <button class="btn subtle sm" style="margin-top:10px;width:100%" data-action="${act}">${label}</button>`;
+}
+
+function renderJournal(){
+  const el=document.getElementById('tab-journal');
+  if(!state.journal.length){
+    el.innerHTML=`<div class="empty"><div class="ei">🧾</div><div style="font-weight:600;color:var(--ink-2)">No transactions yet</div>
+      <div class="tiny" style="margin-top:6px">Top-ups, charges and feature activations will appear here.</div></div>`;
+    return;
+  }
+  const sorted=[...state.journal].sort((a,b)=>b.date-a.date);
+  let html='';
+  sorted.forEach((e,i)=>{
+    html+=journalCard(e,i);
+  });
+  el.innerHTML=html;
+}
+function journalCard(e,i){
+  let icon,cls,title,amt='';
+  if(e.kind==='credit'){icon='↓';cls='credit';title=e.context;amt=`<span class="jamt plus">+${money(e.amount)}</span>`;}
+  else if(e.kind==='charge'){icon='↑';cls='charge';title=e.context;amt=`<span class="jamt">−${money(e.amount)}</span>`;}
+  else if(e.kind==='oneoff'){icon='↑';cls='charge';title=e.context;amt=`<span class="jamt">−${money(e.amount)}</span>`;}
+  else if(e.kind==='activate'){icon='+';cls='activate';title='Activated · '+e.feat;}
+  else if(e.kind==='deactivate'){icon='–';cls='deactivate';title='Deactivated · '+e.feat;}
+  else if(e.kind==='pause'){icon='⏸';cls='pause';title='Features paused · '+e.feat;}
+  else if(e.kind==='paypal'){icon='ⓟ';cls='paypal'+(e.critical?' crit':'');title='PayPal · '+e.context;amt=statusPill(e.status);}
+  const sub=fmt(e.date);
+  // body
+  let body='';
+  const dr=(k,v)=>`<div class="detail-row"><span class="dk">${k}</span><span class="dv">${v}</span></div>`;
+  if(e.kind==='credit'){
+    const dcAt = e.dcAt!=null? e.dcAt : activeDailyRaw();
+    const cdAfter = dcAt>0? 'until '+fmt(addDays(NOW, Math.floor(e.balAfter/dcAt))) : '—';
+    body+=dr('Amount credited','+'+money(e.amount));
+    body+=dr('Balance before / after',money(e.balBefore)+' → '+money(e.balAfter));
+    if(e.activeAt) body+=dr('Active features',e.activeAt);
+    if(e.dcAt!=null) body+=dr('Daily cost at credit',money(e.dcAt)+'/day');
+    body+=dr('Coverage after',cdAfter);
+    body+=dr('PayPal status',e.status);
+    body+=idRow('Jaznu operation ID',e.jzId);
+    if(e.ppId) body+=idRow('PayPal transaction ID',e.ppId);
+  } else if(e.kind==='charge'||e.kind==='oneoff'){
+    body+=dr('Amount',(e.kind==='oneoff'?'':'−')+money(e.amount));
+    body+=dr('Context',e.context);
+    if(e.balBefore!=null) body+=dr('Balance before / after',money(e.balBefore)+' → '+money(e.balAfter));
+    if(e.feat) body+=dr(e.kind==='oneoff'?'Feature':'Features charged',e.feat);
+    if(e.coverAfter) body+=dr('Coverage after',e.coverAfter);
+    body+=dr('Status',e.status||'Completed');
+    body+=idRow('Operation ID',e.jzId||rid('JZ'));
+    if(e.ppId) body+=idRow('PayPal transaction ID',e.ppId);
+  } else if(e.kind==='paypal'){
+    body+=dr('Amount',money(e.amount));
+    body+=dr('Context',e.context);
+    body+=dr('Status',e.status);
+    body+=`<div class="tiny muted" style="margin:4px 0 8px;line-height:1.45">${e.explain||''}</div>`;
+    body+=idRow('Jaznu operation ID',e.jzId);
+    if(e.ppId) body+=idRow('PayPal transaction ID',e.ppId);
+    if(e.cta) body+=`<button class="btn subtle sm" style="width:100%;margin-top:10px" data-action="${e.cta==='Contact support'?'support':'ppUpdate'}">${e.cta}</button>`;
+  } else if(e.kind==='activate'){
+    body+=dr('Feature / package',e.feat);
+    body+=dr('Price',money(e.daily)+'/day');
+    body+=dr('Daily cost before / after',money(e.dcBefore)+'/day → '+money(e.dcAfter)+'/day');
+    body+=dr('Coverage before / after',coverForDaily(e.dcBefore)+' → '+coverForDaily(e.dcAfter));
+    body+=dr('Activated',fmt(e.date));
+  } else if(e.kind==='deactivate'){
+    body+=dr('Feature / package',e.feat);
+    body+=dr('Daily cost before / after',money(e.dcBefore)+'/day → '+money(e.dcAfter)+'/day');
+    body+=dr('Coverage before / after',coverForDaily(e.dcBefore)+' → '+coverForDaily(e.dcAfter));
+    if(e.newCover) body+=dr('New coverage',e.newCover);
+  } else if(e.kind==='pause'){
+    body+=dr('Features',e.feat);
+    body+=dr('Reason','$0 balance — grace period ended');
+    body+=`<div class="tiny muted" style="margin-top:6px">Data and settings are saved. Top up to restore access.</div>`;
+  }
+  return `<div class="jentry" data-jidx="${i}">
+    <div class="jhead"><div class="jicon ${cls}">${icon}</div>
+      <div class="jmid"><div class="jtitle">${title}</div><div class="jsub">${sub}</div></div>
+      ${amt}<span class="chev">▾</span></div>
+    <div class="jbody">${body}</div>
+  </div>`;
+}
+function idRow(label,id){
+  return `<div class="idrow"><code>${label}: ${id}</code><button class="copybtn" data-copy="${id}">Copy</button></div>`;
+}
+
+function renderPackages(){
+  const el=document.getElementById('tab-packages');
+  const active=[],avail=[];
+  for(const f of Object.values(state.features)){
+    if(f.status==='active'||f.status==='paused'||f.status==='processing') active.push(f);
+    else avail.push(f);
+  }
+  let html='';
+  if(active.length){
+    html+=`<div class="pkg-heading">Active <span class="count">${active.length}</span></div>`;
+    active.forEach(f=>html+=featCard(f));
+  }
+  if(avail.length){
+    html+=`<div class="pkg-heading">Available <span class="count">${avail.length}</span></div>`;
+    avail.forEach(f=>html+=featCard(f));
+  }
+  el.innerHTML=html;
+}
+function featCard(f){
+  // Active/enabled features carry an "Active" label; inactive features carry no label.
+  let badge='',meta='';
+  if(f.status==='active'){
+    badge='<span class="badge active">Active</span>';
+    meta=`${money(f.daily)}/day · activated ${fmt(f.activated)}`;
+  } else if(f.status==='paused'){
+    badge='<span class="badge paused">Paused</span>';
+    meta=`${money(f.daily)}/day · data saved`;
+  } else if(f.status==='processing'){
+    badge='<span class="badge proc">Processing</span>';
+    meta=`${money(f.daily)}/day · awaiting PayPal`;
+  } else if(f.status==='available_used'){
+    meta=`${money(f.daily)}/day · last active ${fmt(f.lastActive)} · settings saved`;
+  } else if(f.type==='oneoff'){
+    meta=`One-time ${money(f.price)}`;
+  } else {
+    meta=`${money(f.daily)}/day`;
+  }
+  return `<div class="feat" data-feat="${f.id}">
+    <div class="ftop"><div class="fthumb">${f.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div class="fname">${f.name} ${badge}</div>
+        <div class="fdesc">${f.desc}</div>
+        <div class="fmeta">${meta}</div>
+      </div></div>
+  </div>`;
+}
+
+/* ================= Bottom sheet ================= */
+const sheet=document.getElementById('sheet'), scrim=document.getElementById('scrim');
+function openSheet(title, bodyHTML, footHTML){
+  document.getElementById('sheetTitle').textContent=title;
+  document.getElementById('sheetBody').innerHTML=bodyHTML;
+  document.getElementById('sheetFoot').innerHTML=footHTML||'';
+  scrim.classList.add('show'); sheet.classList.add('show');
+}
+function closeSheet(){ scrim.classList.remove('show'); sheet.classList.remove('show'); }
+document.getElementById('sheetClose').onclick=closeSheet;
+scrim.onclick=closeSheet;
+
+/* ---- Top-up sheet ---- */
+let topupCtx={amount:0,preset:null,date:null};
+const iso = d => d.toISOString().slice(0,10);
+function sheetTopup(prefillAmount){
+  const dc=rawDaily();
+  const hasFeat = dc>0; // only show coverage UI when there are active features
+  topupCtx={amount:prefillAmount||0,preset:null,date:null};
+  const presets=[{m:1,label:'1 month'},{m:3,label:'3 months'},{m:6,label:'6 months'},{m:12,label:'12 months'}];
+
+  let body=`<p class="tiny muted" style="margin-top:0">Top up your wallet. Charges for active features are deducted daily — nothing is locked into a plan.</p>
+    <div class="field"><label>Amount to add</label>
+      <div class="inp"><span>$</span><input id="tuAmount" type="number" inputmode="decimal" placeholder="0.00" value="${prefillAmount||''}"></div>
+      <div class="hint" id="tuAmountHint">${hasFeat?'Enter an amount — we\'ll show how long it covers you.':'No active paid features — funds simply stay in your wallet.'}</div>
+    </div>`;
+  if(hasFeat){
+    let pg='';
+    presets.forEach((p,i)=>{ pg+=`<div class="preset" data-preset="${i}"><div class="pp">${p.label}</div><div class="pa">${money(p.m*30*dc)}</div></div>`; });
+    body+=`<div class="field"><label>…or cover until a date</label>
+        <div class="inp"><span>📅</span><input id="tuDate" type="date" value="" min="${iso(NOW)}"></div>
+        <div class="hint" id="tuDateHint">Pick a date — we\'ll show the amount needed.</div>
+      </div>
+      <div class="sec-label" style="margin:4px 2px 8px">Or choose a coverage period</div>
+      <div class="preset-grid">${pg}</div>`;
+  }
+  body+=`<div class="recap" id="tuRecap" style="display:none"></div>`;
+  const foot=`<button class="btn primary" id="tuPay" disabled>Pay via PayPal</button>`;
+  openSheet('Top up balance',body,foot);
+
+  const amtEl=document.getElementById('tuAmount');
+  const dateEl=hasFeat?document.getElementById('tuDate'):null;
+
+  // Amount → coverage date (bidirectional)
+  amtEl.oninput=()=>{
+    clearPreset();
+    topupCtx.amount=parseFloat(amtEl.value)||0; topupCtx.date=null;
+    if(hasFeat){
+      if(topupCtx.amount>0){
+        const days=Math.floor((state.balance+topupCtx.amount)/dc);
+        dateEl.value=iso(addDays(NOW,days));
+        document.getElementById('tuAmountHint').textContent=`Covers you until ${fmt(addDays(NOW,days))}.`;
+        document.getElementById('tuDateHint').textContent='Auto-calculated from the amount above.';
+      } else { dateEl.value=''; document.getElementById('tuAmountHint').textContent='Enter an amount — we\'ll show how long it covers you.'; }
+    }
+    updateTopupRecap();
+  };
+
+  if(hasFeat){
+    // Coverage date → required amount (bidirectional)
+    dateEl.oninput=()=>{
+      clearPreset();
+      const d=new Date(dateEl.value+'T00:00'); if(isNaN(d)) return;
+      const days=Math.max(0,daysBetween(NOW,d));
+      const need=Math.max(0, Math.round((days*dc - state.balance)*100)/100);
+      topupCtx.amount=need; topupCtx.date=d;
+      amtEl.value=need.toFixed(2);
+      document.getElementById('tuDateHint').textContent=`Need ${money(need)} to cover until ${fmt(d)}.`;
+      document.getElementById('tuAmountHint').textContent='Auto-calculated from the date.';
+      updateTopupRecap();
+    };
+    document.querySelectorAll('#sheetBody .preset').forEach(p=>{
+      p.onclick=()=>{
+        document.querySelectorAll('#sheetBody .preset').forEach(x=>x.classList.remove('sel'));
+        p.classList.add('sel');
+        const pr=presets[+p.dataset.preset];
+        topupCtx.preset=pr; topupCtx.date=null;
+        topupCtx.amount=Math.round(pr.m*30*dc*100)/100;
+        amtEl.value=topupCtx.amount.toFixed(2);
+        const days=Math.floor((state.balance+topupCtx.amount)/dc);
+        dateEl.value=iso(addDays(NOW,days));
+        updateTopupRecap();
+      };
+    });
+  }
+  updateTopupRecap();
+}
+function clearPreset(){topupCtx.preset=null;document.querySelectorAll('#sheetBody .preset').forEach(x=>x.classList.remove('sel'));}
+function updateTopupRecap(){
+  const dc=rawDaily();
+  const recap=document.getElementById('tuRecap'), pay=document.getElementById('tuPay');
+  if(!topupCtx.amount||topupCtx.amount<=0){recap.style.display='none';pay.disabled=true;return;}
+  pay.disabled=false;
+  let rows=`<div class="detail-row"><span class="dk">You pay</span><span class="dv">${money(topupCtx.amount)}</span></div>
+    <div class="detail-row"><span class="dk">New balance</span><span class="dv">${money(state.balance+topupCtx.amount)}</span></div>`;
+  if(dc>0){ // coverage only shown when there are active features
+    const days=Math.floor((state.balance+topupCtx.amount)/dc);
+    rows+=`<div class="detail-row"><span class="dk">Coverage</span><span class="dv">Covers you until <b>${fmt(addDays(NOW,days))}</b></span></div>`;
+  }
+  recap.style.display='block'; recap.innerHTML=rows;
+  pay.onclick=()=>{
+    closeSheet();
+    const ctx = topupCtx.preset? `Wallet top-up · ${topupCtx.preset.label} coverage`:'Wallet top-up';
+    openPayPal(topupCtx.amount, ctx, {type:'topup',amount:topupCtx.amount,context:ctx});
+  };
+}
+
+/* ---- Feature detail sheet ---- */
+function sheetFeature(id){
+  const f=state.features[id];
+  if(f.type==='oneoff') return sheetOneOff(f);
+  const dcNow=activeDailyRaw();
+  let body=`<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+      <div class="fthumb" style="width:48px;height:48px">${f.icon}</div>
+      <div><div style="font-weight:700;font-size:16px">${f.name}</div><div class="tiny muted">${money(f.daily)}/day</div></div></div>
+    <p style="font-size:14px;line-height:1.5;margin:0 0 12px">${f.desc}</p>`;
+  if(f.includes&&f.includes.length){
+    body+=`<div class="sec-label" style="margin:0 0 8px">Included</div><div class="chip-row" style="margin-bottom:14px">`;
+    f.includes.forEach(x=>body+=`<span class="chip">✓ ${x}</span>`);
+    body+=`</div>`;
+  }
+  let foot='';
+  if(f.status==='active'){
+    const dcAfter=Math.round((dcNow-f.daily)*100)/100;
+    body+=changePreview('If you turn it off', dcNow, dcAfter);
+    body+=`<div class="notif warn" style="margin-bottom:0"><div class="nt">What you'd lose</div>${f.risk}<br><br>Your data stays saved in the system.</div>`;
+    foot=`<button class="btn danger" data-deactivate="${f.id}">Turn off feature</button>`;
+  } else if(f.status==='paused'){
+    body+=`<div class="notif err" style="margin-bottom:0"><div class="nt">Paused</div>This feature is suspended because your balance ran out. Data and settings are saved. Top up to restore it.</div>`;
+    foot=`<button class="btn primary" data-action="topup">Top up to restore</button>`;
+  } else if(f.status==='available_used'){
+    const dcAfter=Math.round((dcNow+f.daily)*100)/100;
+    body+=`<div class="notif ok" style="margin-bottom:12px"><div class="nt">Usage recap</div>${f.stats||''}<br><br>Your previous settings are saved and will be restored.</div>`;
+    body+=changePreview('If you turn it on', dcNow, dcAfter);
+    foot=`<button class="btn primary" data-activate="${f.id}">Restore access · ${money(f.daily)}/day</button>`;
+  } else { // available (never used)
+    const dcAfter=Math.round((dcNow+f.daily)*100)/100;
+    const enough = state.balance>=f.daily; // at least 1 day
+    body+=changePreview('If you turn it on', dcNow, dcAfter);
+    if(!enough){
+      body+=`<div class="notif warn" style="margin-bottom:0"><div class="nt">Not enough balance</div>Your balance can't cover this feature yet. Top up to activate it.</div>`;
+      foot=`<button class="btn primary" data-action="topup">Top up &amp; activate</button>`;
+    } else if(Math.floor(state.balance/dcAfter)<21){
+      body+=`<div class="notif warn" style="margin-bottom:0"><div class="nt">Short runway</div>With this feature active, your balance lasts only ${Math.floor(state.balance/dcAfter)} days. Want to top up too?</div>`;
+      foot=`<button class="btn primary" data-activate="${f.id}">Activate · ${money(f.daily)}/day</button>
+            <button class="btn ghost" style="margin-top:10px" data-action="topup">Top up &amp; activate</button>`;
+    } else {
+      foot=`<button class="btn primary" data-activate="${f.id}">Activate · ${money(f.daily)}/day</button>`;
+    }
+  }
+  openSheet(f.name, body, foot);
+}
+
+/* ---- One-off feature (Menu Transfer): free pre-check + PayPal ---- */
+function sheetOneOff(f){
+  const body=`<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+      <div class="fthumb" style="width:48px;height:48px">${f.icon}</div>
+      <div><div style="font-weight:700;font-size:16px">${f.name}</div><div class="tiny muted">One-time ${money(f.price)}</div></div></div>
+    <p style="font-size:14px;line-height:1.5;margin:0 0 12px">${f.desc}</p>
+    <div class="notif ok" style="margin-bottom:12px"><div class="nt">✓ Free pre-check passed</div>Your photo looks good — we found <b>~24 menu items</b>. Pay to start digitizing.</div>
+    <div class="recap"><div class="detail-row"><span class="dk">One-time price</span><span class="dv">${money(f.price)}</span></div>
+      <div class="detail-row"><span class="dk">Paid via</span><span class="dv">PayPal</span></div></div>`;
+  const foot=`<button class="btn primary" data-oneoff="${f.id}">Pay ${money(f.price)} via PayPal</button>`;
+  openSheet(f.name, body, foot);
+}
+
+/* ---- Deactivate confirm ---- */
+function sheetDeactivate(id){
+  const f=state.features[id];
+  const dcNow=activeDailyRaw(), dcAfter=Math.round((dcNow-f.daily)*100)/100;
+  const coverAfter = dcAfter>0? fmt(addDays(NOW,Math.floor(state.balance/dcAfter))) : 'unlimited';
+  const coverNow = dcNow>0? fmt(addDays(NOW,Math.floor(state.balance/dcNow))) : '—';
+  const body=`<div class="notif warn"><div class="nt">Turning off ${f.name}</div>${f.risk}<br><br>Your data stays saved — you can restore anytime.</div>
+    <div class="recap"><div class="detail-row"><span class="dk">Coverage now</span><span class="dv">until ${coverNow}</span></div>
+      <div class="detail-row"><span class="dk">Coverage after</span><span class="dv" style="color:var(--ok)">until ${coverAfter}</span></div>
+      <div class="detail-row"><span class="dk">Daily cost</span><span class="dv">${money(dcNow)} → ${money(dcAfter)}/day</span></div></div>`;
+  const foot=`<button class="btn danger" data-confirm-deactivate="${f.id}">Yes, turn off</button>
+    <button class="btn subtle" style="margin-top:10px" onclick="closeSheet()">Keep it active</button>`;
+  openSheet('Turn off '+f.name, body, foot);
+}
+
+/* ================= PayPal mock ================= */
+const ppScreen=document.getElementById('ppScreen');
+let ppPending=null; // {type, amount, context, featId}
+function openPayPal(amount, label, pending){
+  ppPending=pending;
+  document.getElementById('ppAmount').textContent=money(amount);
+  document.getElementById('ppTo').textContent=label?('for '+label):'to Jaznu';
+  const outcomes=[
+    {s:'Completed',ic:'✅',bg:'var(--ok-bg)',c:'var(--ok)',t:'Completed',d:'Payment confirmed, funds credited'},
+    {s:'Processing',ic:'⏳',bg:'var(--info-bg)',c:'var(--info)',t:'Processing',d:'PayPal still verifying — balance updates later'},
+    {s:'Awaiting confirmation',ic:'↩️',bg:'var(--warn-bg)',c:'var(--warn)',t:'Awaiting confirmation',d:'Returned without confirming'},
+    {s:'Action required',ic:'⚠️',bg:'var(--warn-bg)',c:'var(--warn)',t:'Action required',d:'PayPal needs another step'},
+    {s:'Cancelled',ic:'🚫',bg:'var(--err-bg)',c:'var(--err)',t:'Cancelled',d:'You cancelled the payment'},
+    {s:'Failed',ic:'❌',bg:'var(--err-bg)',c:'var(--err)',t:'Failed',d:'Declined / could not complete'},
+    {s:'Clarifying',ic:'❔',bg:'var(--info-bg)',c:'var(--info)',t:'Status clarifying',d:'No final response from PayPal'}
+  ];
+  document.getElementById('ppList').innerHTML=outcomes.map(o=>
+    `<button class="sim-btn" data-ppout="${o.s}">
+       <span class="sim-ic" style="background:${o.bg};color:${o.c}">${o.ic}</span>
+       <span><span class="st">${o.t}</span><span class="ss">${o.d}</span></span></button>`).join('');
+  ppScreen.classList.add('show');
+}
+function closePayPal(){ ppScreen.classList.remove('show'); }
+document.getElementById('ppCancel').onclick=()=>resolvePayPal('Cancelled');
+document.getElementById('ppList').onclick=(e)=>{
+  const b=e.target.closest('[data-ppout]'); if(!b)return;
+  resolvePayPal(b.dataset.ppout);
+};
+
+function resolvePayPal(status){
+  closePayPal();
+  const p=ppPending; if(!p){return;}
+  // Completed → show verifying, then apply
+  if(status==='Completed'){
+    state.verifying=true; state.lastPP=null; render(); switchTab('overview');
+    showToast('Returned from PayPal · verifying…');
+    setTimeout(()=>{
+      state.verifying=false;
+      applyCompleted(p);
+      render();
+      showToast('✓ Payment completed');
+    },1600);
+    return;
+  }
+  // Non-completed statuses
+  const ctxDate=NOW;
+  state.lastPP={amount:p.amount,context:p.context,date:ctxDate,status:status};
+  // journal entry for the attempt (except pure cancel we still log)
+  state.journal.push({id:rid('JZ'),kind:(p.type==='topup'?'credit':'oneoff'),amount:p.amount,
+     date:ctxDate,context:p.context+' · '+status,status:status,
+     balBefore:state.balance,balAfter:state.balance,jzId:rid('JZ'),ppId:rid('PP'),pending:true});
+  // processing feature stays processing
+  if(p.type==='activate' && (status==='Processing'||status==='Awaiting confirmation'||status==='Action required'||status==='Clarifying')){
+    state.features[p.featId].status='processing';
+  }
+  render(); switchTab('overview');
+  const msg={'Processing':'Payment processing','Cancelled':'Payment cancelled','Failed':'Payment failed',
+    'Awaiting confirmation':'Awaiting confirmation','Action required':'Action required in PayPal','Clarifying':'Status clarifying'}[status];
+  showToast(msg);
+}
+function applyCompleted(p){
+  const ctxDate=NOW;
+  if(p.type==='topup'){
+    const before=state.balance;
+    const dcAt=rawDaily();
+    state.balance=Math.round((state.balance+p.amount)*100)/100;
+    // topping up clears grace/pause and restores paused features
+    if(state.graceDaysLeft>0) state.graceDaysLeft=0;
+    if(state.paused){ state.paused=false; for(const f of Object.values(state.features)) if(f.status==='paused') f.status='active'; }
+    state.lastPP={amount:p.amount,context:p.context,date:ctxDate,status:'Completed'};
+    state.journal.push({id:rid('JZ'),kind:'credit',amount:p.amount,date:ctxDate,context:p.context,
+      status:'Completed',balBefore:before,balAfter:state.balance,jzId:rid('JZ'),ppId:rid('PP'),dcAt:dcAt||undefined});
+    clearNotifOnAction('topup');
+  } else if(p.type==='activate'){
+    const f=state.features[p.featId];
+    const dcBefore=activeDailyRaw();
+    f.status='active'; f.activated=ctxDate;
+    const dcAfter=activeDailyRaw();
+    state.lastPP={amount:p.amount,context:p.context,date:ctxDate,status:'Completed'};
+    state.journal.push({id:rid('JZ'),kind:'credit',amount:p.amount,date:ctxDate,context:p.context,
+      status:'Completed',balBefore:state.balance,balAfter:state.balance+p.amount,jzId:rid('JZ'),ppId:rid('PP')});
+    state.balance=Math.round((state.balance+p.amount)*100)/100;
+    state.journal.push({id:rid('JZ'),kind:'activate',feat:f.name,daily:f.daily,date:ctxDate,dcBefore:dcBefore,dcAfter:dcAfter});
+    clearNotifOnAction('activate:'+p.featId);
+  } else if(p.type==='oneoff'){
+    const f=state.features[p.featId];
+    state.lastPP={amount:p.amount,context:p.context,date:ctxDate,status:'Completed'};
+    state.journal.push({id:rid('JZ'),kind:'oneoff',amount:p.amount,date:ctxDate,context:p.context,
+      status:'Completed',balBefore:state.balance,balAfter:state.balance,jzId:rid('JZ'),ppId:rid('PP')});
+  }
+}
+
+/* ---- Activate from balance (no PayPal — pays from existing wallet) ---- */
+function activateFromBalance(id){
+  const f=state.features[id];
+  const dcBefore=activeDailyRaw();
+  f.status='active'; f.activated=NOW;
+  const dcAfter=activeDailyRaw();
+  state.journal.push({id:rid('JZ'),kind:'activate',feat:f.name,daily:f.daily,date:NOW,dcBefore:dcBefore,dcAfter:dcAfter});
+  clearNotifOnAction('activate:'+id);
+  closeSheet(); render(); showToast('✓ '+f.name+' activated');
+}
+function deactivate(id){
+  const f=state.features[id];
+  const dcBefore=activeDailyRaw();
+  f.status = f.everUsed===false ? 'available' : 'available_used';
+  f.status='available_used'; f.lastActive=NOW;
+  if(!f.stats) f.stats='Feature was active on your menu.';
+  const dcAfter=activeDailyRaw();
+  const newCover = dcAfter>0? 'until '+fmt(addDays(NOW,Math.floor(state.balance/dcAfter))) : 'unlimited';
+  state.journal.push({id:rid('JZ'),kind:'deactivate',feat:f.name,date:NOW,dcBefore:dcBefore,dcAfter:dcAfter,newCover:newCover});
+  closeSheet(); render(); showToast('Feature turned off · data saved');
+}
+
+/* ================= Tabs (inline in the Billing card) ================= */
+function switchTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  ['overview','journal','packages'].forEach(t=>
+    document.getElementById('tab-'+t).classList.toggle('hidden',t!==tab));
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchTab(t.dataset.tab));
+
+// static modules do nothing (they are not part of this prototype)
+document.querySelectorAll('[data-static]').forEach(c=>c.onclick=()=>showToast('Not part of this prototype'));
+
+/* ---- Global click delegation for dynamic buttons ---- */
+document.getElementById('billingModule').addEventListener('click',(e)=>{
+  const t=e.target;
+  const actionEl=t.closest('[data-action]');
+  const notifEl=t.closest('[data-notif-action]');
+  const dismissEl=t.closest('[data-notif-dismiss]');
+  const featEl=t.closest('[data-feat]');
+  const jEl=t.closest('.jhead');
+  const copyEl=t.closest('[data-copy]');
+
+  if(copyEl){ e.stopPropagation(); copyText(copyEl.dataset.copy); return; }
+  if(dismissEl){ state.notif=null; render(); return; }
+  if(jEl){ jEl.parentElement.classList.toggle('open'); return; }
+  if(notifEl){ handleAction(notifEl.dataset.notifAction); return; }
+  if(actionEl){ handleAction(actionEl.dataset.action); return; }
+  if(featEl){ sheetFeature(featEl.dataset.feat); return; }
+});
+// sheet buttons
+document.getElementById('sheet').addEventListener('click',(e)=>{
+  const t=e.target;
+  const a=t.closest('[data-action]');
+  const act=t.closest('[data-activate]');
+  const one=t.closest('[data-oneoff]');
+  const de=t.closest('[data-deactivate]');
+  const cde=t.closest('[data-confirm-deactivate]');
+  if(a){ handleAction(a.dataset.action); return; }
+  if(act){ handleActivate(act.dataset.activate); return; }
+  if(one){ const f=state.features[one.dataset.oneoff]; closeSheet(); openPayPal(f.price,f.name,{type:'oneoff',amount:f.price,context:'One-time · '+f.name,featId:f.id}); return; }
+  if(de){ sheetDeactivate(de.dataset.deactivate); return; }
+  if(cde){ deactivate(cde.dataset.confirmDeactivate); return; }
+});
+
+function handleAction(action){
+  if(action==='topup'){ sheetTopup(); }
+  else if(action==='ppUpdate'){ ppUpdateStatus(); }
+  else if(action==='ppResume'){ // resume in PayPal
+    const p=state.lastPP; closeSheet();
+    openPayPal(p.amount, p.context, {type:'topup',amount:p.amount,context:p.context});
+  }
+  else if(action==='support'){ showToast('Support chat would open here'); }
+  else if(action&&action.startsWith('activate:')){ sheetFeature(action.split(':')[1]); }
+}
+function handleActivate(id){
+  const f=state.features[id];
+  // If enough balance → activate straight from wallet. Else → PayPal top-up+activate.
+  const dcAfter=activeDailyRaw()+f.daily;
+  if(state.balance>=f.daily){
+    activateFromBalance(id);
+  } else {
+    const need=Math.max(5, Math.ceil(30*dcAfter)); // suggest ~1 month
+    closeSheet();
+    openPayPal(need, f.name+' (top up & activate)', {type:'activate',amount:need,context:'Top up & activate · '+f.name,featId:id});
+  }
+}
+function ppUpdateStatus(){
+  // simulate re-check: processing → completed
+  const p=state.lastPP;
+  showToast('Re-checking with PayPal…');
+  state.verifying=true; render();
+  setTimeout(()=>{
+    state.verifying=false;
+    // find pending journal entry, complete it
+    const pend=[...state.journal].reverse().find(j=>j.pending);
+    if(pend){ pend.pending=false; pend.status='Completed'; pend.context=pend.context.replace(/ · .*/,'');
+      if(pend.kind==='credit'){ pend.balAfter=state.balance+pend.amount; state.balance=Math.round((state.balance+pend.amount)*100)/100; }
+    }
+    // resolve any processing feature
+    for(const f of Object.values(state.features)) if(f.status==='processing') f.status='active', f.activated=NOW;
+    if(p) p.status='Completed';
+    state.lastPP={amount:p.amount,context:p.context.replace(/ · .*/,''),date:NOW,status:'Completed'};
+    render(); showToast('✓ Payment completed');
+  },1500);
+}
+
+/* ================= Scenario switcher ================= */
+const scenPanel=document.getElementById('scenPanel');
+document.getElementById('scenFab').onclick=()=>{renderScenarioList();scenPanel.classList.add('show');};
+document.getElementById('scenClose').onclick=()=>scenPanel.classList.remove('show');
+scenPanel.onclick=(e)=>{ if(e.target===scenPanel) scenPanel.classList.remove('show'); };
+function renderScenarioList(){
+  const el=document.getElementById('scenList');
+  el.innerHTML=Object.entries(SCENARIOS).map(([k,s])=>
+    `<div class="scen-item ${state&&state.key===k?'cur':''}" data-scen="${k}">
+      <div class="si">${s.icon}</div>
+      <div><div class="stt">${s.title}</div><div class="sds">${s.desc}</div></div></div>`).join('');
+  el.querySelectorAll('[data-scen]').forEach(it=>it.onclick=()=>loadScenario(it.dataset.scen));
+}
+function loadScenario(key){
+  state=buildScenario(key);
+  scenPanel.classList.remove('show');
+  render(); switchTab('overview');
+  showToast(SCENARIOS[key].icon+' '+SCENARIOS[key].title);
+}
+
+/* ================= Utils ================= */
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1900);
+}
+function copyText(txt){
+  const id=txt.split(': ').pop();
+  navigator.clipboard&&navigator.clipboard.writeText(id).catch(()=>{});
+  showToast('Copied: '+id);
+}
+// live clock
+setInterval(()=>{const d=new Date();document.getElementById('clock').textContent=
+  d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});},1000);
+
+/* ================= Boot ================= */
+state=buildScenario('healthy');
+render();
+</script>
+</body>
+</html>
