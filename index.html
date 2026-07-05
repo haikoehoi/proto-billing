@@ -554,6 +554,15 @@ function lowJournal(S){
   ];
 }
 // Rich history covering every journal card type + PayPal operations across all statuses (incl. critical)
+// Status metadata for PayPal operations logged from live flows (journal card copy + CTA)
+const PP_META={
+  'Processing':{explain:'PayPal is processing the payment. No need to pay again — your balance updates after final confirmation.',cta:'Update status'},
+  'Awaiting confirmation':{explain:'Payment wasn\'t confirmed in PayPal.',cta:'Continue in PayPal'},
+  'Action required':{explain:'PayPal needs you to confirm the payment or choose another method.',cta:'Return to PayPal'},
+  'Cancelled':{explain:'The payment was cancelled. Your Jaznu balance is unchanged.',cta:'Start again'},
+  'Failed':{explain:'PayPal couldn\'t complete the payment. Your Jaznu balance is unchanged.',cta:'Try again',critical:true},
+  'Clarifying':{explain:'PayPal didn\'t return a final response yet. Jaznu will re-check the operation.',cta:'Update status'}
+};
 // PayPal operation card builder (used across scenario journals)
 function ppOp(off,amount,context,status,explain,cta,critical){
   return {id:rid('JZ'),kind:'paypal',date:addDays(NOW,off),
@@ -794,7 +803,11 @@ function journalCard(e,i){
     body+=`<div class="tiny muted" style="margin:4px 0 8px;line-height:1.45">${e.explain||''}</div>`;
     body+=idRow('Jaznu operation ID',e.jzId);
     if(e.ppId) body+=idRow('PayPal transaction ID',e.ppId);
-    if(e.cta) body+=`<button class="btn subtle sm" style="width:100%;margin-top:10px" data-action="${e.cta==='Contact support'?'support':'ppUpdate'}">${e.cta}</button>`;
+    if(e.cta){
+      const actMap={'Contact support':'support','Update status':'ppUpdate','View details':'ppUpdate',
+        'Try again':'topup','Start again':'topup','Continue in PayPal':'ppResume','Return to PayPal':'ppResume'};
+      body+=`<button class="btn subtle sm" style="width:100%;margin-top:10px" data-action="${actMap[e.cta]||'ppUpdate'}">${e.cta}</button>`;
+    }
   } else if(e.kind==='activate'){
     body+=dr('Feature / package',e.feat);
     body+=dr('Price',money(e.daily)+'/day');
@@ -1094,13 +1107,14 @@ function resolvePayPal(status){
     },1600);
     return;
   }
-  // Non-completed statuses
+  // Non-completed statuses → journal gets a PayPal operation card with the real status
   const ctxDate=NOW;
   state.lastPP={amount:p.amount,context:p.context,date:ctxDate,status:status};
-  // journal entry for the attempt (except pure cancel we still log)
-  state.journal.push({id:rid('JZ'),kind:(p.type==='topup'?'credit':'oneoff'),amount:p.amount,
-     date:ctxDate,context:p.context+' · '+status,status:status,
-     balBefore:state.balance,balAfter:state.balance,jzId:rid('JZ'),ppId:rid('PP'),pending:true});
+  const meta=PP_META[status]||{};
+  const stillPending=['Processing','Awaiting confirmation','Action required','Clarifying'].includes(status);
+  state.journal.push({id:rid('JZ'),kind:'paypal',amount:p.amount,date:ctxDate,context:p.context,
+     status:status,explain:meta.explain||'',cta:meta.cta||'',critical:!!meta.critical,
+     jzId:rid('JZ'),ppId:rid('PP'),pending:stillPending,ptype:p.type,featId:p.featId});
   // processing feature stays processing
   if(p.type==='activate' && (status==='Processing'||status==='Awaiting confirmation'||status==='Action required'||status==='Clarifying')){
     state.features[p.featId].status='processing';
@@ -1239,8 +1253,15 @@ function ppUpdateStatus(){
     state.verifying=false;
     // find pending journal entry, complete it
     const pend=[...state.journal].reverse().find(j=>j.pending);
-    if(pend){ pend.pending=false; pend.status='Completed'; pend.context=pend.context.replace(/ · .*/,'');
-      if(pend.kind==='credit'){ pend.balAfter=state.balance+pend.amount; state.balance=Math.round((state.balance+pend.amount)*100)/100; }
+    if(pend){
+      pend.pending=false; pend.status='Completed';
+      pend.explain='PayPal confirmed the payment.'; pend.cta='';
+      if(pend.kind==='paypal' && pend.ptype==='topup'){
+        const before=state.balance;
+        state.balance=Math.round((state.balance+pend.amount)*100)/100;
+        state.journal.push({id:rid('JZ'),kind:'credit',amount:pend.amount,date:NOW,context:pend.context,
+          status:'Completed',balBefore:before,balAfter:state.balance,jzId:rid('JZ'),ppId:pend.ppId});
+      }
     }
     // resolve any processing feature
     for(const f of Object.values(state.features)) if(f.status==='processing') f.status='active', f.activated=NOW;
