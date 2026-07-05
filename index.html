@@ -490,7 +490,7 @@ function buildScenario(key){
     ];
     S.lastPP={amount:50,context:'Wallet top-up · 3 months coverage',date:addDays(NOW,-12),status:'Completed'};
     S.notif={type:'info',critical:false,title:'Lock in a longer runway',
-      body:'Your menu got <b>1,240 views</b> this month. Top up for a longer coverage period — fewer top-ups, uninterrupted work.',cta:'Top up',action:'topup'};
+      body:'Your menu got <b>1,240 views</b> this month. <b>Top up</b> for a longer coverage period — fewer top-ups, uninterrupted work.',cta:'Top up',action:'topup'};
   }
   else if(key==='activation'){
     S.balance=50; // no active paid features → daily cost 0
@@ -508,21 +508,21 @@ function buildScenario(key){
     S.journal=lowJournal(S);
     S.lastPP={amount:20,context:'Wallet top-up · 1 month coverage',date:addDays(NOW,-30),status:'Completed'};
     S.notif={type:'warn',critical:true,title:'Your balance runs out soon',
-      body:'About <b>6 days</b> left. Guests viewed your extended menu photos <b>320 times</b> and analytics recorded <b>240 sessions</b>. Top up to keep features running.',cta:'Top up',action:'topup'};
+      body:'About <b>6 days</b> left. Guests viewed your extended menu photos <b>320 times</b> and analytics recorded <b>240 sessions</b>. <b>Top up to keep features running.</b>',cta:'Top up',action:'topup'};
   }
   else if(key==='critical'){
     S.balance=0.80; actExtended(-58); S.features.analytics.status='active'; S.features.analytics.activated=addDays(NOW,-30);
     S.journal=lowJournal(S);
     S.lastPP={amount:20,context:'Wallet top-up · 1 month coverage',date:addDays(NOW,-30),status:'Completed'};
     S.notif={type:'err',critical:true,title:'Only 1–2 days left',
-      body:'You have <b>~1 day</b> before paid features are turned off. Top up now to keep Extended Menu and Analytics running without interruption.',cta:'Top up',action:'topup'};
+      body:'You have <b>~1 day</b> before paid features are turned off. <b>Top up now</b> to keep Extended Menu and Analytics running without interruption.',cta:'Top up',action:'topup'};
   }
   else if(key==='grace'){
     S.balance=0; S.graceDaysLeft=5; actExtended(-64); S.features.analytics.status='active'; S.features.analytics.activated=addDays(NOW,-30);
     S.journal=lowJournal(S);
     S.lastPP={amount:20,context:'Wallet top-up · 1 month coverage',date:addDays(NOW,-33),status:'Completed'};
     S.notif={type:'warn',critical:true,title:'Grace period active',
-      body:'Your balance ran out, but we kept paid features active for <b>5 more days</b> so you have time to top up without interruption. Top up to keep them running.',cta:'Top up',action:'topup'};
+      body:'Your balance ran out, but we kept paid features active for <b>5 more days</b> so you have time to top up without interruption. <b>Top up to keep them running.</b>',cta:'Top up',action:'topup'};
   }
   else if(key==='ledger'){
     S.balance=50; actExtended(-30); S.features.analytics.status='active'; S.features.analytics.activated=addDays(NOW,-22);
@@ -538,7 +538,7 @@ function buildScenario(key){
       {id:rid('JZ'),kind:'pause',feat:'Extended Menu, Analytics',date:addDays(NOW,-1),context:'Paid features suspended — $0 balance'}];
     S.lastPP={amount:20,context:'Wallet top-up · 1 month coverage',date:addDays(NOW,-40),status:'Completed'};
     S.notif={type:'err',critical:true,title:'Paid features paused',
-      body:'Your balance ran out and paid features are paused. <b>Your settings and data are saved.</b> Top up to restore access to Extended Menu and Analytics.',cta:'Top up',action:'topup'};
+      body:'Your balance ran out and paid features are paused. Your settings and data are saved. <b>Top up to restore access</b> to Extended Menu and Analytics.',cta:'Top up',action:'topup'};
   }
   return S;
 }
@@ -664,10 +664,12 @@ function renderOverview(){
   if(state.notif){
     const n=state.notif;
     const x = n.critical? '' : `<button class="notif-x" data-notif-dismiss title="Dismiss">✕</button>`;
+    // Top-up CTA is redundant (Billing already has a Top up button) — drop the button, the body bolds the action instead
+    const cta = n.action==='topup'? '' : `<button class="btn primary" data-notif-action="${n.action}">${n.cta}</button>`;
     html+=`<div class="notif ${n.type}">
       ${x}
       <div class="nt">${n.title}</div><div>${n.body}</div>
-      <button class="btn primary" data-notif-action="${n.action}">${n.cta}</button>
+      ${cta}
     </div>`;
   }
 
