@@ -766,7 +766,7 @@ function renderJournal(){
 function journalCard(e,i){
   let icon,cls,title,amt='';
   if(e.kind==='credit'){icon='↓';cls='credit';title=e.context;amt=`<span class="jamt plus">+${money(e.amount)}</span>`;}
-  else if(e.kind==='charge'){icon='↑';cls='charge';title=e.context;amt=`<span class="jamt">−${money(e.amount)}</span>`;}
+  else if(e.kind==='charge'){icon='↑';cls='charge';title=e.context.split(' · ')[0];amt=`<span class="jamt">−${money(e.amount)}</span>`;}
   else if(e.kind==='oneoff'){icon='↑';cls='charge';title=e.context;amt=`<span class="jamt">−${money(e.amount)}</span>`;}
   else if(e.kind==='activate'){icon='+';cls='activate';title='Activated · '+e.feat;}
   else if(e.kind==='deactivate'){icon='–';cls='deactivate';title='Deactivated · '+e.feat;}
