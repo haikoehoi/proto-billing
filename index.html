@@ -482,7 +482,11 @@ function buildScenario(key){
       {id:rid('JZ'),kind:'credit',amount:50,date:addDays(NOW,-12),context:'Wallet top-up · 3 months coverage',status:'Completed',balBefore:0,balAfter:50,ppId:rid('PP'),jzId:rid('JZ'),dcAt:0.30},
       {id:rid('JZ'),kind:'activate',feat:'Extended Menu',daily:0.30,date:addDays(NOW,-12),dcBefore:0,dcAfter:0.30},
       {id:rid('JZ'),kind:'charge',amount:0.30,date:addDays(NOW,-2),context:'Daily charge · Extended Menu',feat:'Extended Menu',status:'Completed',balBefore:50.6,balAfter:50.3,jzId:rid('JZ')},
-      {id:rid('JZ'),kind:'charge',amount:0.30,date:addDays(NOW,-1),context:'Daily charge · Extended Menu',feat:'Extended Menu',status:'Completed',balBefore:50.3,balAfter:50,jzId:rid('JZ')}
+      {id:rid('JZ'),kind:'charge',amount:0.30,date:addDays(NOW,-1),context:'Daily charge · Extended Menu',feat:'Extended Menu',status:'Completed',balBefore:50.3,balAfter:50,jzId:rid('JZ')},
+      ppOp(-8,20,'Wallet top-up','Processing','PayPal is processing the payment. No need to pay again — your balance updates after final confirmation.','Update status'),
+      ppOp(-6,20,'Wallet top-up','Cancelled','The payment was cancelled. Your Jaznu balance is unchanged.','Start again'),
+      ppOp(-4,25,'Wallet top-up','Failed','PayPal couldn\'t complete the payment. Your Jaznu balance is unchanged.','Try again',true),
+      ppOp(-3,15,'Wallet top-up','Refunded','Funds were returned via PayPal. Your Jaznu balance was adjusted.','View details',true)
     ];
     S.lastPP={amount:50,context:'Wallet top-up · 3 months coverage',date:addDays(NOW,-12),status:'Completed'};
     S.notif={type:'info',critical:false,title:'Lock in a longer runway',
@@ -491,7 +495,9 @@ function buildScenario(key){
   else if(key==='activation'){
     S.balance=50; // no active paid features → daily cost 0
     S.journal=[
-      {id:rid('JZ'),kind:'credit',amount:50,date:addDays(NOW,-3),context:'Wallet top-up',status:'Completed',balBefore:0,balAfter:50,ppId:rid('PP'),jzId:rid('JZ')}
+      {id:rid('JZ'),kind:'credit',amount:50,date:addDays(NOW,-3),context:'Wallet top-up',status:'Completed',balBefore:0,balAfter:50,ppId:rid('PP'),jzId:rid('JZ')},
+      ppOp(-4,50,'Wallet top-up','Awaiting confirmation','Payment wasn\'t confirmed in PayPal.','Continue in PayPal'),
+      ppOp(-5,50,'Wallet top-up','Failed','PayPal couldn\'t complete the payment. Your Jaznu balance is unchanged.','Try again',true)
     ];
     S.lastPP={amount:50,context:'Wallet top-up',date:addDays(NOW,-3),status:'Completed'};
     S.notif={type:'info',critical:false,title:'See what your guests love',
@@ -540,13 +546,21 @@ function lowJournal(S){
   return [
     {id:rid('JZ'),kind:'credit',amount:20,date:addDays(NOW,-30),context:'Wallet top-up · 1 month coverage',status:'Completed',balBefore:0,balAfter:20,ppId:rid('PP'),jzId:rid('JZ'),dcAt:0.50},
     {id:rid('JZ'),kind:'activate',feat:'Analytics',daily:0.20,date:addDays(NOW,-20),dcBefore:0.30,dcAfter:0.50},
-    {id:rid('JZ'),kind:'charge',amount:0.50,date:addDays(NOW,-1),context:'Daily charge · Extended Menu, Analytics',feat:'Extended Menu, Analytics',status:'Completed',balBefore:S.balance+0.5,balAfter:S.balance,jzId:rid('JZ')}
+    {id:rid('JZ'),kind:'charge',amount:0.50,date:addDays(NOW,-1),context:'Daily charge · Extended Menu, Analytics',feat:'Extended Menu, Analytics',status:'Completed',balBefore:S.balance+0.5,balAfter:S.balance,jzId:rid('JZ')},
+    ppOp(-10,20,'Wallet top-up','Action required','PayPal needs you to confirm the payment or choose another method.','Return to PayPal'),
+    ppOp(-7,20,'Wallet top-up','Payment delayed','This is taking longer than usual. We can verify it via PayPal.','Contact support',true),
+    ppOp(-5,20,'Wallet top-up','Clarifying','PayPal didn\'t return a final response yet. Jaznu will re-check the operation.','Update status'),
+    ppOp(-3,40,'Chargeback opened','Disputed','A dispute, chargeback or reversal was opened on this payment. Your balance may be adjusted.','Contact support',true)
   ];
 }
 // Rich history covering every journal card type + PayPal operations across all statuses (incl. critical)
+// PayPal operation card builder (used across scenario journals)
+function ppOp(off,amount,context,status,explain,cta,critical){
+  return {id:rid('JZ'),kind:'paypal',date:addDays(NOW,off),
+    amount,context,status,explain,cta,critical:!!critical,ppId:rid('PP'),jzId:rid('JZ')};
+}
 function ledgerJournal(){
-  const pp=(off,amount,context,status,explain,cta,critical)=>({id:rid('JZ'),kind:'paypal',date:addDays(NOW,off),
-    amount,context,status,explain,cta,critical:!!critical,ppId:rid('PP'),jzId:rid('JZ')});
+  const pp=ppOp;
   return [
     // --- Feature lifecycle cards ---
     {id:rid('JZ'),kind:'credit',amount:50,date:addDays(NOW,-30),context:'Wallet top-up · 3 months coverage',status:'Completed',balBefore:0,balAfter:50,ppId:rid('PP'),jzId:rid('JZ'),dcAt:0.30,activeAt:'Extended Menu'},
