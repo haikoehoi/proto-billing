@@ -896,10 +896,16 @@ scrim.onclick=closeSheet;
 
 /* ---- Top-up sheet ---- */
 let topupCtx={amount:0,preset:null,date:null};
-const iso = d => d.toISOString().slice(0,10);
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+// daily cost the wallet will carry after this top-up: active features, plus paused ones (they restore on top-up)
+function topupDaily(){
+  let sum=0;
+  for(const f of Object.values(state.features)) if(f.status==='active'||f.status==='paused') sum+=f.daily||0;
+  return Math.round(sum*100)/100;
+}
 function sheetTopup(prefillAmount){
-  const dc=rawDaily();
-  const hasFeat = dc>0; // only show coverage UI when there are active features
+  const dc=topupDaily();
+  const hasFeat = dc>0; // coverage UI hidden only when there are no (active or restorable) paid features
   topupCtx={amount:prefillAmount||0,preset:null,date:null};
   const presets=[{m:1,label:'1 month'},{m:3,label:'3 months'},{m:6,label:'6 months'},{m:12,label:'12 months'}];
 
@@ -924,25 +930,29 @@ function sheetTopup(prefillAmount){
 
   const amtEl=document.getElementById('tuAmount');
   const dateEl=hasFeat?document.getElementById('tuDate'):null;
+  const bind=(el,fn)=>{el.addEventListener('input',fn);el.addEventListener('change',fn);};
 
   // Amount → coverage date (bidirectional)
-  amtEl.oninput=()=>{
+  const onAmount=()=>{
     clearPreset();
     topupCtx.amount=parseFloat(amtEl.value)||0; topupCtx.date=null;
     if(hasFeat){
       if(topupCtx.amount>0){
         const days=Math.floor((state.balance+topupCtx.amount)/dc);
-        dateEl.value=iso(addDays(NOW,days));
-        document.getElementById('tuAmountHint').textContent=`Covers you until ${fmt(addDays(NOW,days))}.`;
+        const until=addDays(NOW,days);
+        dateEl.value=iso(until);
+        document.getElementById('tuAmountHint').textContent=`Covers you until ${fmt(until)}.`;
         document.getElementById('tuDateHint').textContent='Auto-calculated from the amount above.';
       } else { dateEl.value=''; document.getElementById('tuAmountHint').textContent='Enter an amount — we\'ll show how long it covers you.'; }
     }
     updateTopupRecap();
   };
+  bind(amtEl,onAmount);
 
   if(hasFeat){
     // Coverage date → required amount (bidirectional)
-    dateEl.oninput=()=>{
+    const onDate=()=>{
+      if(!dateEl.value) return;
       clearPreset();
       const d=new Date(dateEl.value+'T00:00'); if(isNaN(d)) return;
       const days=Math.max(0,daysBetween(NOW,d));
@@ -953,6 +963,7 @@ function sheetTopup(prefillAmount){
       document.getElementById('tuAmountHint').textContent='Auto-calculated from the date.';
       updateTopupRecap();
     };
+    bind(dateEl,onDate);
     document.querySelectorAll('#sheetBody .preset').forEach(p=>{
       p.onclick=()=>{
         document.querySelectorAll('#sheetBody .preset').forEach(x=>x.classList.remove('sel'));
@@ -971,7 +982,7 @@ function sheetTopup(prefillAmount){
 }
 function clearPreset(){topupCtx.preset=null;document.querySelectorAll('#sheetBody .preset').forEach(x=>x.classList.remove('sel'));}
 function updateTopupRecap(){
-  const dc=rawDaily();
+  const dc=topupDaily();
   const recap=document.getElementById('tuRecap'), pay=document.getElementById('tuPay');
   if(!topupCtx.amount||topupCtx.amount<=0){recap.style.display='none';pay.disabled=true;return;}
   pay.disabled=false;
