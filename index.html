@@ -124,6 +124,8 @@ body{display:flex;justify-content:center;min-height:100vh;padding:16px 0}
 
 /* Last operation card */
 .lastop{border:1px solid var(--line-2);border-radius:10px;padding:12px;background:var(--surface-2)}
+.lastop.crit{border-color:#f3c6c1;background:var(--err-bg)}
+.lastop.crit .amt{color:var(--err)}
 .lastop .row1{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .lastop .amt{font-weight:800;font-size:16px}
 .lastop .ctx{font-size:13px;color:var(--ink-2);margin-top:2px}
@@ -701,11 +703,11 @@ function renderOverview(){
       <div class="tiny dim" style="margin-top:8px">We'll update your balance once PayPal confirms.</div></div>`;
   } else if(state.lastPP){
     const p=state.lastPP;
-    html+=`<div class="lastop">
+    html+=`<div class="lastop${p.critical?' crit':''}">
       <div class="row1"><div><div class="amt">${money(p.amount)}</div><div class="ctx">${p.context}</div></div>
       ${statusPill(p.status)}</div>
       <div class="dt">${fmt(p.date)} · ${['10:24 AM','2:47 PM','9:12 AM'][p.date.getDate()%3]}</div>
-      ${ppStatusCTA(p.status)}
+      ${ppStatusCTA(p.status,p.amount)}
     </div>`;
   } else {
     html+=`<div class="empty" style="padding:24px"><div class="ei">💳</div>No operations yet</div>`;
@@ -728,15 +730,16 @@ function statusPill(s){
   const [c,t]=map[s]||['proc',s];
   return `<span class="pill ${c}"><span class="dot"></span>${t}</span>`;
 }
-function ppStatusCTA(s){
+function ppStatusCTA(s,amount){
   const cta={
     'Processing':['Update status','ppUpdate'],'Payment delayed':['Contact support','support'],
     'Awaiting confirmation':['Continue in PayPal','ppResume'],'Action required':['Return to PayPal','ppResume'],
-    'Cancelled':['Start again','topup'],'Failed':['Try again','topup'],
+    'Cancelled':['Start again','topupRetry'],'Failed':['Try again','topupRetry'],
     'Clarifying':['Update status','ppUpdate'],'Partially completed':['Contact support','support']
   };
   if(!cta[s]) return '';
   const [label,act]=cta[s];
+  const amtAttr = amount!=null? ` data-amount="${amount}"` : '';
   const explain={
     'Processing':'PayPal is processing the payment. No need to pay again — your balance updates after final confirmation.',
     'Awaiting confirmation':'Payment wasn\'t confirmed in PayPal.',
@@ -748,7 +751,7 @@ function ppStatusCTA(s){
     'Payment delayed':'This is taking longer than usual. We can verify it via PayPal.'
   }[s]||'';
   return `<div class="tiny muted" style="margin-top:10px;line-height:1.45">${explain}</div>
-    <button class="btn subtle sm" style="margin-top:10px;width:100%" data-action="${act}">${label}</button>`;
+    <button class="btn subtle sm" style="margin-top:10px;width:100%" data-action="${act}"${amtAttr}>${label}</button>`;
 }
 
 function renderJournal(){
@@ -807,8 +810,10 @@ function journalCard(e,i){
     if(e.ppId) body+=idRow('PayPal transaction ID',e.ppId);
     if(e.cta){
       const actMap={'Contact support':'support','Update status':'ppUpdate','View details':'ppUpdate',
-        'Try again':'topup','Start again':'topup','Continue in PayPal':'ppResume','Return to PayPal':'ppResume'};
-      body+=`<button class="btn subtle sm" style="width:100%;margin-top:10px" data-action="${actMap[e.cta]||'ppUpdate'}">${e.cta}</button>`;
+        'Try again':'topupRetry','Start again':'topupRetry','Continue in PayPal':'ppResume','Return to PayPal':'ppResume'};
+      const jAct=actMap[e.cta]||'ppUpdate';
+      const jAmt=jAct==='topupRetry'? ` data-amount="${e.amount}"` : '';
+      body+=`<button class="btn subtle sm" style="width:100%;margin-top:10px" data-action="${jAct}"${jAmt}>${e.cta}</button>`;
     }
   } else if(e.kind==='activate'){
     body+=dr('Feature / package',e.feat);
@@ -1132,8 +1137,8 @@ function resolvePayPal(status){
   }
   // Non-completed statuses → journal gets a PayPal operation card with the real status
   const ctxDate=NOW;
-  state.lastPP={amount:p.amount,context:p.context,date:ctxDate,status:status};
   const meta=PP_META[status]||{};
+  state.lastPP={amount:p.amount,context:p.context,date:ctxDate,status:status,critical:!!meta.critical};
   const stillPending=['Processing','Awaiting confirmation','Action required','Clarifying'].includes(status);
   state.journal.push({id:rid('JZ'),kind:'paypal',amount:p.amount,date:ctxDate,context:p.context,
      status:status,explain:meta.explain||'',cta:meta.cta||'',critical:!!meta.critical,
@@ -1227,7 +1232,7 @@ document.getElementById('billingModule').addEventListener('click',(e)=>{
   if(dismissEl){ state.notif=null; render(); return; }
   if(jEl){ jEl.parentElement.classList.toggle('open'); return; }
   if(notifEl){ handleAction(notifEl.dataset.notifAction); return; }
-  if(actionEl){ handleAction(actionEl.dataset.action); return; }
+  if(actionEl){ handleAction(actionEl.dataset.action, actionEl.dataset); return; }
   if(featEl){ sheetFeature(featEl.dataset.feat); return; }
 });
 // sheet buttons
@@ -1238,15 +1243,20 @@ document.getElementById('sheet').addEventListener('click',(e)=>{
   const one=t.closest('[data-oneoff]');
   const de=t.closest('[data-deactivate]');
   const cde=t.closest('[data-confirm-deactivate]');
-  if(a){ handleAction(a.dataset.action); return; }
+  if(a){ handleAction(a.dataset.action, a.dataset); return; }
   if(act){ handleActivate(act.dataset.activate); return; }
   if(one){ const f=state.features[one.dataset.oneoff]; closeSheet(); openPayPal(f.price,f.name,{type:'oneoff',amount:f.price,context:'One-time · '+f.name,featId:f.id}); return; }
   if(de){ sheetDeactivate(de.dataset.deactivate); return; }
   if(cde){ deactivate(cde.dataset.confirmDeactivate); return; }
 });
 
-function handleAction(action){
+function handleAction(action,data){
   if(action==='topup'){ sheetTopup(); }
+  else if(action==='topupRetry'){ // retry a failed/cancelled top-up — restore the previous amount
+    let amt=parseFloat(data&&data.amount);
+    if(!(amt>0)) amt=state.lastPP? state.lastPP.amount : 0;
+    sheetTopup(amt>0?amt:undefined);
+  }
   else if(action==='ppUpdate'){ ppUpdateStatus(); }
   else if(action==='ppResume'){ // resume in PayPal
     const p=state.lastPP; closeSheet();
