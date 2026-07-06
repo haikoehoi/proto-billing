@@ -798,9 +798,9 @@ function renderJournal(){
 }
 function journalCard(e,i){
   let icon,cls,title,amt='';
-  if(e.kind==='credit'){icon='↓';cls='credit';title=e.context;amt=`<span class="jamt plus">+${money(e.amount)}</span>`;}
+  if(e.kind==='credit'){icon='↓';cls='credit';title='PayPal · Wallet top-up';amt=`<span class="jamt plus">+${money(e.amount)}</span>`;}
   else if(e.kind==='charge'){icon='↑';cls='charge';title=e.context.split(' · ')[0];amt=`<span class="jamt">−${money(e.amount)}</span>`;}
-  else if(e.kind==='oneoff'){icon='↑';cls='charge';title=e.context;amt=`<span class="jamt">−${money(e.amount)}</span>`;}
+  else if(e.kind==='oneoff'){icon='↑';cls='charge';title=e.feat||e.context;amt=`<span class="jamt">−${money(e.amount)}</span>`;}
   else if(e.kind==='activate'){icon='+';cls='activate';title='Activated · '+e.feat;}
   else if(e.kind==='deactivate'){icon='–';cls='deactivate';title='Deactivated · '+e.feat;}
   else if(e.kind==='pause'){icon='⏸';cls='pause';title='Features paused · '+e.feat;}
@@ -812,18 +812,18 @@ function journalCard(e,i){
   if(e.kind==='credit'){
     const dcAt = e.dcAt!=null? e.dcAt : activeDailyRaw();
     const cdAfter = dcAt>0? 'until '+fmt(addDays(NOW, Math.floor(e.balAfter/dcAt))) : '—';
+    const cdBefore = (e.balBefore>0 && dcAt>0)? 'until '+fmt(addDays(NOW, Math.floor(e.balBefore/dcAt))) : '—';
     body+=dr('Amount credited','+'+money(e.amount));
-    body+=dr('Balance before / after',money(e.balBefore)+' → '+money(e.balAfter));
+    body+=dr('Balance',money(e.balBefore)+' → '+money(e.balAfter));
     if(e.activeAt) body+=dr('Active features',e.activeAt);
-    if(e.dcAt!=null) body+=dr('Daily cost at credit',money(e.dcAt)+'/day');
-    body+=dr('Coverage after',cdAfter);
+    if(e.dcAt!=null) body+=dr('Daily cost at credit',money(e.dcAt));
+    body+=dr('Coverage',cdBefore+' → '+cdAfter);
     body+=dr('PayPal status',e.status);
     body+=idRow('Jaznu operation ID',e.jzId);
     if(e.ppId) body+=idRow('PayPal transaction ID',e.ppId);
   } else if(e.kind==='charge'||e.kind==='oneoff'){
     body+=dr('Amount',(e.kind==='oneoff'?'':'−')+money(e.amount));
-    body+=dr('Context',e.context);
-    if(e.balBefore!=null) body+=dr('Balance before / after',money(e.balBefore)+' → '+money(e.balAfter));
+    if(e.balBefore!=null) body+=dr('Balance',money(e.balBefore)+' → '+money(e.balAfter));
     if(e.feat) body+=dr(e.kind==='oneoff'?'Feature':'Features charged',e.feat);
     if(e.coverAfter) body+=dr('Coverage after',e.coverAfter);
     body+=dr('Status',e.status||'Completed');
@@ -831,7 +831,6 @@ function journalCard(e,i){
     if(e.ppId) body+=idRow('PayPal transaction ID',e.ppId);
   } else if(e.kind==='paypal'){
     body+=dr('Amount',money(e.amount));
-    body+=dr('Context',e.context);
     body+=dr('Status',e.status);
     body+=`<div class="tiny muted" style="margin:4px 0 8px;line-height:1.45">${e.explain||''}</div>`;
     body+=idRow('Jaznu operation ID',e.jzId);
@@ -846,13 +845,13 @@ function journalCard(e,i){
   } else if(e.kind==='activate'){
     body+=dr('Feature / package',e.feat);
     body+=dr('Price',money(e.daily)+'/day');
-    body+=dr('Daily cost before / after',money(e.dcBefore)+'/day → '+money(e.dcAfter)+'/day');
-    body+=dr('Coverage before / after',coverForDaily(e.dcBefore)+' → '+coverForDaily(e.dcAfter));
+    body+=dr('Daily cost',money(e.dcBefore)+'/day → '+money(e.dcAfter)+'/day');
+    body+=dr('Coverage',coverForDaily(e.dcBefore)+' → '+coverForDaily(e.dcAfter));
     body+=dr('Activated',fmt(e.date));
   } else if(e.kind==='deactivate'){
     body+=dr('Feature / package',e.feat);
-    body+=dr('Daily cost before / after',money(e.dcBefore)+'/day → '+money(e.dcAfter)+'/day');
-    body+=dr('Coverage before / after',coverForDaily(e.dcBefore)+' → '+coverForDaily(e.dcAfter));
+    body+=dr('Daily cost',money(e.dcBefore)+'/day → '+money(e.dcAfter)+'/day');
+    body+=dr('Coverage',coverForDaily(e.dcBefore)+' → '+coverForDaily(e.dcAfter));
     if(e.newCover) body+=dr('New coverage',e.newCover);
   } else if(e.kind==='pause'){
     body+=dr('Features',e.feat);
@@ -1383,7 +1382,7 @@ function applyCompleted(p){
   } else if(p.type==='oneoff'){
     const f=state.features[p.featId];
     state.lastPP={amount:p.amount,context:p.context,date:ctxDate,status:'Completed'};
-    state.journal.push({id:rid('JZ'),kind:'oneoff',amount:p.amount,date:ctxDate,context:p.context,
+    state.journal.push({id:rid('JZ'),kind:'oneoff',amount:p.amount,date:ctxDate,context:p.context,feat:f.name,
       status:'Completed',balBefore:state.balance,balAfter:state.balance,jzId:rid('JZ'),ppId:rid('PP')});
   }
 }
