@@ -179,6 +179,36 @@ body{display:flex;justify-content:center;min-height:100vh;padding:16px 0}
 .pkg-heading:not(:first-child){margin-top:20px}
 .pkg-heading .count{font-size:12px;font-weight:700;color:var(--ink-3);background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;padding:1px 8px}
 
+/* Build-configuration entry button (top of Packages & features) */
+.cfg-btn{display:flex;align-items:center;gap:11px;width:100%;padding:11px 14px;margin-bottom:14px;
+  border:1px solid var(--brand);border-radius:11px;background:#f0f9fa;color:var(--brand);
+  font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;text-align:left}
+.cfg-btn:active{background:#e3f3f5}
+.cfg-btn .cfg-ic{width:30px;height:30px;flex:0 0 30px;border-radius:8px;background:#fff;border:1px solid var(--line-2);
+  display:flex;align-items:center;justify-content:center;font-size:16px}
+.cfg-btn .cfg-up{margin-left:auto;display:flex;align-items:center;justify-content:center;color:var(--brand);line-height:1}
+.cfg-btn .cfg-up i{font-style:normal;font-size:22px;font-weight:800}
+
+/* Config sheet — feature toggles */
+.cfg-list{border:1px solid var(--line-2);border-radius:11px;padding:2px 14px;margin-bottom:14px;background:var(--surface)}
+.cfg-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line-2)}
+.cfg-row:first-child{border-top:0}
+.cfg-row .cfg-meta{flex:1;min-width:0}
+.cfg-row .cfg-name{font-weight:700;font-size:14px}
+.cfg-row .cfg-cost{font-size:12px;color:var(--ink-3);margin-top:2px}
+.cfg-daily{display:flex;justify-content:space-between;align-items:center;background:var(--surface-2);
+  border:1px solid var(--line-2);border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:14px;font-weight:700}
+.cfg-daily .cfg-daily-v{color:var(--brand)}
+.cfg-divider{height:1px;background:var(--line-2);margin:20px 0 16px}
+/* iOS-style toggle */
+.tgl{position:relative;display:inline-block;width:42px;height:24px;flex:0 0 42px}
+.tgl input{opacity:0;width:0;height:0;position:absolute;margin:0}
+.tgl .tglt{position:absolute;inset:0;background:var(--line);border-radius:24px;transition:.2s;cursor:pointer}
+.tgl .tglt:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;
+  border-radius:50%;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.tgl input:checked + .tglt{background:var(--brand)}
+.tgl input:checked + .tglt:before{transform:translateX(18px)}
+
 /* Empty state */
 .empty{text-align:center;color:var(--ink-3);padding:40px 20px}
 .empty .ei{font-size:34px;margin-bottom:10px}
@@ -849,7 +879,11 @@ function renderPackages(){
     if(f.status==='active'||f.status==='paused'||f.status==='processing') active.push(f);
     else avail.push(f);
   }
-  let html='';
+  let html=`<button class="cfg-btn" data-action="buildConfig">
+      <span class="cfg-ic">🎛️</span>
+      <span>Build your configuration</span>
+      <span class="cfg-up"><i>›</i></span>
+    </button>`;
   if(active.length){
     html+=`<div class="pkg-heading">Active <span class="count">${active.length}</span></div>`;
     active.forEach(f=>html+=featCard(f));
@@ -1015,6 +1049,178 @@ function updateTopupRecap(){
     const ctx = topupCtx.preset? `Wallet top-up · ${topupCtx.preset.label} coverage`:'Wallet top-up';
     openPayPal(topupCtx.amount, ctx, {type:'topup',amount:topupCtx.amount,context:ctx});
   };
+}
+
+/* ---- Build-configuration sheet ---- */
+let cfgCtx={toggles:{},amount:0,date:null};
+// recurring (non-one-off) features, in stable catalog order
+function configFeatures(){ return Object.values(state.features).filter(f=>f.type!=='oneoff'); }
+// daily cost implied by the current toggle selection
+function cfgDaily(){
+  let sum=0;
+  for(const f of configFeatures()) if(cfgCtx.toggles[f.id]) sum+=f.daily||0;
+  return Math.round(sum*100)/100;
+}
+function sheetBuildConfig(){
+  const feats=configFeatures();
+  cfgCtx={toggles:{},amount:0,date:null,last:null};
+  feats.forEach(f=>cfgCtx.toggles[f.id]=(f.status==='active'));
+
+  let rows='';
+  feats.forEach(f=>{
+    rows+=`<div class="cfg-row">
+      <div class="cfg-meta"><div class="cfg-name">${f.name}</div><div class="cfg-cost">${money(f.daily)}/day</div></div>
+      <label class="tgl"><input type="checkbox" data-cfg-toggle="${f.id}" ${cfgCtx.toggles[f.id]?'checked':''}><span class="tglt"></span></label>
+    </div>`;
+  });
+
+  const body=`<div class="sec-label" style="margin:0 2px 8px">Cost calculator</div>
+    <p class="tiny muted" style="margin:0 2px 12px">Turn features on or off and estimate what this setup costs to run — independent of your wallet balance.</p>
+    <div class="cfg-list">${rows}</div>
+    <div class="cfg-daily"><span>Daily cost</span><span class="cfg-daily-v" id="cfgDaily">${money(cfgDaily())}/day</span></div>
+    <div class="field"><label>Budget for this setup</label>
+      <div class="inp"><span>$</span><input id="cfgAmount" type="number" inputmode="decimal" placeholder="0.00"></div>
+      <div class="hint" id="cfgAmountHint">Enter an amount to see how long it runs this setup.</div>
+    </div>
+    <div class="field"><label>…or run it until a date</label>
+      <div class="inp"><span>📅</span><input id="cfgDate" type="date"></div>
+      <div class="hint" id="cfgDateHint">Pick a date to see what it costs.</div>
+    </div>
+
+    <div class="cfg-divider"></div>
+    <div class="sec-label" style="margin:0 2px 8px">If you apply this configuration</div>
+    <p class="tiny muted" style="margin:0 2px 10px">Reflecting your current wallet balance of <b>${money(state.balance)}</b>.</p>
+    <div class="recap" id="cfgRecap"></div>`;
+  const foot=`<button class="btn primary" id="cfgApply">Apply configuration</button>`;
+  openSheet('Build your configuration',body,foot);
+
+  // Feature toggles — a toggle changes the daily cost, so re-derive the planner
+  document.querySelectorAll('#sheetBody [data-cfg-toggle]').forEach(inp=>{
+    inp.addEventListener('change',()=>{
+      cfgCtx.toggles[inp.dataset.cfgToggle]=inp.checked;
+      document.getElementById('cfgDaily').textContent=money(cfgDaily())+'/day';
+      recomputeCfgPlanner();
+    });
+  });
+
+  const amtEl=document.getElementById('cfgAmount');
+  const dateEl=document.getElementById('cfgDate');
+  const bind=(el,fn)=>{el.addEventListener('input',fn);el.addEventListener('change',fn);};
+
+  // The user's last-touched field is the source of truth; the other is derived.
+  bind(amtEl,()=>{
+    cfgCtx.last='amount';
+    cfgCtx.amount=parseFloat(amtEl.value)||0;
+    cfgCtx.date=null;
+    recomputeCfgPlanner();
+  });
+  bind(dateEl,()=>{
+    cfgCtx.last='date';
+    cfgCtx.date = dateEl.value ? new Date(dateEl.value+'T00:00') : null;
+    if(cfgCtx.date && isNaN(cfgCtx.date)) cfgCtx.date=null;
+    recomputeCfgPlanner();
+  });
+
+  document.getElementById('cfgApply').onclick=applyConfiguration;
+  recomputeCfgPlanner();
+}
+// Keep the two planner inputs consistent for ANY feature selection.
+// Re-derives whichever field the user did NOT last edit, using the current daily cost.
+function recomputeCfgPlanner(){
+  const amtEl=document.getElementById('cfgAmount'), dateEl=document.getElementById('cfgDate');
+  const amtHint=document.getElementById('cfgAmountHint'), dateHint=document.getElementById('cfgDateHint');
+  if(!amtEl||!dateEl){ return; }
+  const dc=cfgDaily();
+  // Pure cost calculator: amount = days × daily cost. Wallet balance is NOT involved here
+  // (the balance-aware view lives in the recap below).
+  const noFeat='Turn on a feature to estimate cost.';
+  const askAmt='Enter an amount to see how long it runs this setup.';
+  const askDate='Pick a date to see what it costs.';
+
+  if(cfgCtx.last==='amount'){
+    // Amount is the source → derive how far it runs the setup
+    if(dc>0 && cfgCtx.amount>0){
+      const days=Math.floor(cfgCtx.amount/dc);
+      const until=addDays(NOW,days);
+      dateEl.value=iso(until);
+      amtHint.textContent=`Runs this setup for ${days} day${days===1?'':'s'} — until ${fmt(until)}.`;
+      dateHint.textContent='Auto-calculated from the amount above.';
+    } else {
+      dateEl.value='';
+      amtHint.textContent = dc>0 ? askAmt : noFeat;
+      dateHint.textContent = askDate;
+    }
+  } else if(cfgCtx.last==='date'){
+    // Date is the source → derive what running the setup until then costs
+    if(!cfgCtx.date){
+      amtEl.value=''; cfgCtx.amount=0;
+      amtHint.textContent = dc>0 ? askAmt : noFeat;
+      dateHint.textContent = askDate;
+    } else if(dc<=0){
+      amtEl.value=''; cfgCtx.amount=0;
+      dateHint.textContent = noFeat;
+      amtHint.textContent = askAmt;
+    } else {
+      const days=Math.max(0,daysBetween(NOW,cfgCtx.date));
+      if(days>0){
+        const cost=Math.round(days*dc*100)/100;
+        cfgCtx.amount=cost;
+        amtEl.value=cost.toFixed(2);
+        dateHint.textContent=`Running this setup until ${fmt(cfgCtx.date)} costs ${money(cost)} (${days} days).`;
+        amtHint.textContent='Auto-calculated from the date.';
+      } else {
+        amtEl.value=''; cfgCtx.amount=0;
+        dateHint.textContent='Pick a future date to see what it costs.';
+        amtHint.textContent=askAmt;
+      }
+    }
+  } else {
+    // Nothing entered yet
+    amtHint.textContent = dc>0 ? askAmt : noFeat;
+    dateHint.textContent = dc>0 ? askDate : noFeat;
+  }
+  updateCfgRecap();
+}
+function updateCfgRecap(){
+  const recap=document.getElementById('cfgRecap'), apply=document.getElementById('cfgApply');
+  const dcBefore=dailyCost(), dcAfter=cfgDaily();
+  const covB=coverForDaily(dcBefore), covA=coverForDaily(dcAfter);
+  recap.innerHTML=`<div class="detail-row"><span class="dk">Daily cost</span><span class="dv">${money(dcBefore)} → ${money(dcAfter)}</span></div>
+    <div class="detail-row"><span class="dk">Coverage</span><span class="dv">${covB} → ${covA}</span></div>`;
+  apply.disabled=!cfgHasChanges(); // only meaningful when the feature selection changed
+}
+function cfgHasChanges(){
+  return configFeatures().some(f=> (!!cfgCtx.toggles[f.id]) !== (f.status==='active'));
+}
+function applyConfiguration(){
+  const activated=[],deactivated=[];
+  configFeatures().forEach(f=>{
+    const want=!!cfgCtx.toggles[f.id], isOn=(f.status==='active');
+    if(want===isOn) return;
+    if(want){ // activate
+      const dcB=activeDailyRaw();
+      if(state.paused) state.paused=false; // reactivating a feature lifts the pause
+      f.status='active'; f.activated=NOW;
+      const dcA=activeDailyRaw();
+      state.journal.push({id:rid('JZ'),kind:'activate',feat:f.name,daily:f.daily,date:NOW,dcBefore:dcB,dcAfter:dcA});
+      clearNotifOnAction('activate:'+f.id);
+      activated.push(f.name);
+    } else { // deactivate
+      const dcB=activeDailyRaw();
+      f.status='available_used'; f.lastActive=NOW;
+      if(!f.stats) f.stats='Feature was active on your menu.';
+      const dcA=activeDailyRaw();
+      const newCover = dcA>0? 'until '+fmt(addDays(NOW,Math.floor(state.balance/dcA))) : 'unlimited';
+      state.journal.push({id:rid('JZ'),kind:'deactivate',feat:f.name,date:NOW,dcBefore:dcB,dcAfter:dcA,newCover:newCover});
+      deactivated.push(f.name);
+    }
+  });
+  closeSheet(); render(); switchTab('packages');
+  let msg='Configuration applied';
+  if(activated.length&&deactivated.length) msg=`✓ ${activated.length} on · ${deactivated.length} off`;
+  else if(activated.length) msg=`✓ Activated ${activated.join(', ')}`;
+  else if(deactivated.length) msg=`Turned off ${deactivated.join(', ')}`;
+  showToast(msg);
 }
 
 /* ---- Feature detail sheet ---- */
@@ -1252,6 +1458,7 @@ document.getElementById('sheet').addEventListener('click',(e)=>{
 
 function handleAction(action,data){
   if(action==='topup'){ sheetTopup(); }
+  else if(action==='buildConfig'){ sheetBuildConfig(); }
   else if(action==='topupRetry'){ // retry a failed/cancelled top-up — restore the previous amount
     let amt=parseFloat(data&&data.amount);
     if(!(amt>0)) amt=state.lastPP? state.lastPP.amount : 0;
