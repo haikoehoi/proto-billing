@@ -916,12 +916,14 @@ function sheetTopup(prefillAmount){
       <div class="inp"><span>$</span><input id="tuAmount" type="number" inputmode="decimal" placeholder="0.00" value="${prefillAmount||''}"></div>
       <div class="hint" id="tuAmountHint">${hasFeat?'Enter an amount — we\'ll show how long it covers you.':'No active paid features — funds simply stay in your wallet.'}</div>
     </div>`;
+  const covNow = hasFeat? addDays(NOW, Math.floor(state.balance/dc)) : NOW;
+  const minDate = hasFeat? addDays(covNow,1) : NOW; // can only extend beyond current coverage
   if(hasFeat){
     let pg='';
     presets.forEach((p,i)=>{ pg+=`<div class="preset" data-preset="${i}"><div class="pp">${p.label}</div><div class="pa">${money(p.m*30*dc)}</div></div>`; });
     body+=`<div class="field"><label>…or cover until a date</label>
-        <div class="inp"><span>📅</span><input id="tuDate" type="date" value="" min="${iso(NOW)}"></div>
-        <div class="hint" id="tuDateHint">Pick a date — we\'ll show the amount needed.</div>
+        <div class="inp"><span>📅</span><input id="tuDate" type="date" value="" min="${iso(minDate)}"></div>
+        <div class="hint" id="tuDateHint">Already covered until <b>${fmt(covNow)}</b>. Pick a later date to extend.</div>
       </div>
       <div class="sec-label" style="margin:4px 2px 8px">Or choose a coverage period</div>
       <div class="preset-grid">${pg}</div>`;
@@ -959,6 +961,14 @@ function sheetTopup(prefillAmount){
       const d=new Date(dateEl.value+'T00:00'); if(isNaN(d)) return;
       const days=Math.max(0,daysBetween(NOW,d));
       const need=Math.max(0, Math.round((days*dc - state.balance)*100)/100);
+      if(need<=0){ // date is within current coverage — nothing to add
+        topupCtx.amount=0; topupCtx.date=null;
+        amtEl.value='';
+        document.getElementById('tuDateHint').innerHTML=`You\'re already covered until <b>${fmt(covNow)}</b> — pick a later date to extend.`;
+        document.getElementById('tuAmountHint').textContent='Enter an amount — we\'ll show how long it covers you.';
+        updateTopupRecap();
+        return;
+      }
       topupCtx.amount=need; topupCtx.date=d;
       amtEl.value=need.toFixed(2);
       document.getElementById('tuDateHint').textContent=`Need ${money(need)} to cover until ${fmt(d)}.`;
