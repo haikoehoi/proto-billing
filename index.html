@@ -657,10 +657,8 @@ function coverForDaily(dc){ return dc>0? fmt(addDays(NOW, Math.floor(state.balan
 // Before/after summary block for a feature toggle (title depends on the action)
 function changePreview(title,dcB,dcA){
   return `<div class="recap"><div class="subhd" style="font-size:13px;margin-bottom:8px">${title}</div>
-    <div class="detail-row"><span class="dk">Daily cost before</span><span class="dv">${money(dcB)}/day</span></div>
-    <div class="detail-row"><span class="dk">Daily cost after</span><span class="dv">${money(dcA)}/day</span></div>
-    <div class="detail-row"><span class="dk">Coverage before</span><span class="dv">${coverForDaily(dcB)}</span></div>
-    <div class="detail-row"><span class="dk">Coverage after</span><span class="dv">${coverForDaily(dcA)}</span></div></div>`;
+    <div class="detail-row"><span class="dk">Daily cost</span><span class="dv">${money(dcB)} → ${money(dcA)}</span></div>
+    <div class="detail-row"><span class="dk">Coverage</span><span class="dv">${coverForDaily(dcB)} → ${coverForDaily(dcA)}</span></div></div>`;
 }
 
 // A notification disappears once its target action has been completed
